@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:journalist_app_1/providers/draft_sync_provider.dart';
 import 'package:journalist_app_1/screens/dashboard_screen.dart';
 import 'package:journalist_app_1/screens/my_news_screen.dart';
 import 'package:journalist_app_1/screens/profile_screen.dart';
@@ -6,7 +8,7 @@ import 'package:journalist_app_1/screens/submit_news_screen.dart';
 
 /// MainNavigationScreen acts as the primary app shell, providing bottom navigation
 /// across the four core field-reporting destinations while keeping Login outside.
-class MainNavigationScreen extends StatefulWidget {
+class MainNavigationScreen extends ConsumerStatefulWidget {
   final int initialIndex;
 
   const MainNavigationScreen({
@@ -15,10 +17,12 @@ class MainNavigationScreen extends StatefulWidget {
   });
 
   @override
-  State<MainNavigationScreen> createState() => _MainNavigationScreenState();
+  ConsumerState<MainNavigationScreen> createState() =>
+      _MainNavigationScreenState();
 }
 
-class _MainNavigationScreenState extends State<MainNavigationScreen> {
+class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
+    with WidgetsBindingObserver {
   late int _currentIndex;
 
   // The four core destinations required by Task 9
@@ -33,6 +37,25 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(draftSyncServiceProvider);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      ref.read(draftSyncServiceProvider).syncAllPendingDrafts();
+    }
   }
 
   void _onDestinationSelected(int index) {

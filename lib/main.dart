@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:journalist_app_1/core/constants/app_colors.dart';
 import 'package:journalist_app_1/screens/login_screen.dart';
 import 'package:journalist_app_1/screens/main_navigation_screen.dart';
 
 void main() {
-  runApp(const JournalistApp());
+  runApp(
+    const ProviderScope(
+      child: JournalistApp(),
+    ),
+  );
 }
 
 class JournalistApp extends StatelessWidget {
@@ -11,19 +17,16 @@ class JournalistApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Restrained navy-blue and white color scheme matching design system
-    const primaryNavy = Color(0xFF0D253F);
-
     return MaterialApp(
       title: 'Journalist Portal',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: primaryNavy,
-          primary: primaryNavy,
+          seedColor: AppColors.navyPrimary,
+          primary: AppColors.navyPrimary,
         ),
-        scaffoldBackgroundColor: const Color(0xFFF7F9FC),
+        scaffoldBackgroundColor: AppColors.neutralLight,
       ),
       // Set initialRoute to MainNavigationScreen for easy multi-tab inspection,
       // keeping LoginScreen cleanly separated outside the bottom navigation bar.

@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:journalist_app_1/core/constants/app_colors.dart';
+import 'package:journalist_app_1/providers/app_providers.dart';
+import 'package:journalist_app_1/screens/drafts_screen.dart';
 
 /// Model representing a sample news item for the Dashboard
 class NewsSubmissionItem {
@@ -19,7 +23,7 @@ class NewsSubmissionItem {
 
 /// The DashboardScreen provides an overview of field reporting activities,
 /// quick submission actions, and status tracking for journalists.
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
   // Local sample mock data for recent submissions
@@ -48,10 +52,13 @@ class DashboardScreen extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) {
-    const navyPrimary = Color(0xFF0D253F);
-    const navyDark = Color(0xFF091B2E);
-    const neutralLight = Color(0xFFF7F9FC);
+  Widget build(BuildContext context, WidgetRef ref) {
+    const navyPrimary = AppColors.navyPrimary;
+    const navyDark = AppColors.navyDark;
+    const neutralLight = AppColors.neutralLight;
+
+    final draftCount = ref.watch(draftCountProvider);
+    final draftCountText = '$draftCount';
 
     return Scaffold(
       backgroundColor: neutralLight,
@@ -204,7 +211,7 @@ class DashboardScreen extends StatelessWidget {
                                   SizedBox(width: 10),
                                   Expanded(
                                     child: Text(
-                                      'Submit News screen will be added in the next task.',
+                                      'Navigate to Submit News tab to write field stories.',
                                     ),
                                   ),
                                 ],
@@ -257,9 +264,14 @@ class DashboardScreen extends StatelessWidget {
                   Expanded(
                     child: _buildStatusCard(
                       label: 'Drafts',
-                      count: '2',
+                      count: draftCountText,
                       icon: Icons.edit_note_rounded,
                       accentColor: const Color(0xFF64748B),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const DraftsScreen()),
+                        );
+                      },
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -323,8 +335,9 @@ class DashboardScreen extends StatelessWidget {
     required String count,
     required IconData icon,
     required Color accentColor,
+    VoidCallback? onTap,
   }) {
-    return Container(
+    final cardContent = Container(
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -363,6 +376,16 @@ class DashboardScreen extends StatelessWidget {
         ],
       ),
     );
+
+    if (onTap != null) {
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: cardContent,
+      );
+    }
+
+    return cardContent;
   }
 
   /// Single news submission card widget
@@ -460,4 +483,3 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 }
-
