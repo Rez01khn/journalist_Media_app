@@ -219,8 +219,10 @@ class MockDraftRepository implements DraftRepository {
 class MockGoogleDriveRepository implements GoogleDriveRepository {
   String? _connectedEmail;
   final List<NewsMedia> _files = [];
-  final Map<String, String> _newsFolders = {}; // folderId -> folderName (News Title)
-  final Map<String, String> _newsFolderOwners = {}; // folderId -> reporterGoogleEmail
+  final Map<String, String> _newsFolders =
+      {}; // folderId -> folderName (News Title)
+  final Map<String, String> _newsFolderOwners =
+      {}; // folderId -> reporterGoogleEmail
   bool _authorized = false;
   int _idCounter = 0;
 
@@ -273,8 +275,9 @@ class MockGoogleDriveRepository implements GoogleDriveRepository {
     String? appFolderName,
     String? existingNewsFolderId,
   }) async {
-    final cleanTitle =
-        newsTitle.trim().isNotEmpty ? newsTitle.trim() : 'Untitled News';
+    final cleanTitle = newsTitle.trim().isNotEmpty
+        ? newsTitle.trim()
+        : 'Untitled News';
 
     if (existingNewsFolderId != null &&
         existingNewsFolderId.isNotEmpty &&

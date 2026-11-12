@@ -5,6 +5,7 @@ import 'package:journalist_app_1/models/news_status.dart';
 import 'package:journalist_app_1/models/reporter.dart';
 import 'package:journalist_app_1/repositories/auth_repository.dart';
 import 'package:journalist_app_1/repositories/draft_repository.dart';
+export 'package:journalist_app_1/providers/auth_provider.dart';
 export 'package:journalist_app_1/providers/google_drive_provider.dart';
 export 'package:journalist_app_1/providers/draft_sync_provider.dart';
 import 'package:journalist_app_1/repositories/mock/mock_repositories.dart';

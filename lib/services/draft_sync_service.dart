@@ -33,8 +33,9 @@ class DraftSyncService {
   // Track which Google account email owns a draft's Drive IDs in memory
   final Map<String, String> _draftSyncedOwnerEmails = {};
 
-  static const EventChannel _connectivityChannel =
-      EventChannel('com.example.journalist_app_1/connectivity');
+  static const EventChannel _connectivityChannel = EventChannel(
+    'com.example.journalist_app_1/connectivity',
+  );
   StreamSubscription<dynamic>? _connectivitySub;
   bool? _lastConnectivityState;
 
@@ -47,27 +48,27 @@ class DraftSyncService {
   }
 
   void _startConnectivityListener() {
-    if (!Platform.isAndroid || Platform.environment.containsKey('FLUTTER_TEST')) {
+    if (!Platform.isAndroid ||
+        Platform.environment.containsKey('FLUTTER_TEST')) {
       return;
     }
     try {
-      _connectivitySub = _connectivityChannel.receiveBroadcastStream().listen(
-        (dynamic event) {
-          if (_isDisposed) return;
-          final isOnline = event == true;
-          final transitionedOnline =
-              _lastConnectivityState == false && isOnline;
-          _lastConnectivityState = isOnline;
-          if (transitionedOnline || (_lastConnectivityState == true && isOnline)) {
-            Future.microtask(() {
-              if (!_isDisposed) {
-                syncAllPendingDrafts();
-              }
-            });
-          }
-        },
-        onError: (_) {},
-      );
+      _connectivitySub = _connectivityChannel.receiveBroadcastStream().listen((
+        dynamic event,
+      ) {
+        if (_isDisposed) return;
+        final isOnline = event == true;
+        final transitionedOnline = _lastConnectivityState == false && isOnline;
+        _lastConnectivityState = isOnline;
+        if (transitionedOnline ||
+            (_lastConnectivityState == true && isOnline)) {
+          Future.microtask(() {
+            if (!_isDisposed) {
+              syncAllPendingDrafts();
+            }
+          });
+        }
+      }, onError: (_) {});
     } catch (_) {
       // Ignored in environments where native EventChannel is unavailable
     }
@@ -127,18 +128,20 @@ class DraftSyncService {
   }
 
   Future<(NewsMedia, bool failed, bool offline, String? error)>
-      _syncSingleMedia({
+  _syncSingleMedia({
     required NewsMedia media,
     required String targetEmail,
     required String newsFolderName,
     required String newsFolderId,
     required bool forceReuploadToFolder,
   }) async {
-    final accountMismatch = media.reporterGoogleAccountEmail != null &&
+    final accountMismatch =
+        media.reporterGoogleAccountEmail != null &&
         media.reporterGoogleAccountEmail!.isNotEmpty &&
         media.reporterGoogleAccountEmail != targetEmail;
 
-    final needsUpload = !media.isUploadedToDrive ||
+    final needsUpload =
+        !media.isUploadedToDrive ||
         media.driveFileId == null ||
         media.driveFileId!.isEmpty ||
         forceReuploadToFolder ||
@@ -160,7 +163,8 @@ class DraftSyncService {
       );
     }
 
-    if (media.localFilePath == null || !File(media.localFilePath!).existsSync()) {
+    if (media.localFilePath == null ||
+        !File(media.localFilePath!).existsSync()) {
       return (
         media.copyWith(
           isUploadedToDrive: false,
@@ -230,7 +234,9 @@ class DraftSyncService {
 
     final driveState = _isDisposed ? null : _ref.read(googleDriveStateProvider);
     final isDriveConnected =
-        driveState != null && driveState.isConnected && driveState.accountEmail != null;
+        driveState != null &&
+        driveState.isConnected &&
+        driveState.accountEmail != null;
 
     // 2. Offline / Disconnected check
     if (!isDriveConnected) {
@@ -265,13 +271,19 @@ class DraftSyncService {
     try {
       // 4. Check account isolation: if this draft was previously synced to a
       //    different reporter's Drive account, clear old cross-account Drive IDs.
-      final switchedAccount = _belongsToDifferentAccount(currentDraft, targetEmail);
-      final String? existingFolderForAccount =
-          switchedAccount ? null : currentDraft.driveFolderId;
-      final String? existingDraftFileForAccount =
-          switchedAccount ? null : currentDraft.driveFileId;
+      final switchedAccount = _belongsToDifferentAccount(
+        currentDraft,
+        targetEmail,
+      );
+      final String? existingFolderForAccount = switchedAccount
+          ? null
+          : currentDraft.driveFolderId;
+      final String? existingDraftFileForAccount = switchedAccount
+          ? null
+          : currentDraft.driveFileId;
 
-      final bool hadNewsFolderBefore = existingFolderForAccount != null &&
+      final bool hadNewsFolderBefore =
+          existingFolderForAccount != null &&
           existingFolderForAccount.isNotEmpty;
       final newsFolderName = currentDraft.headline.trim().isNotEmpty
           ? currentDraft.headline.trim()
@@ -374,8 +386,9 @@ class DraftSyncService {
         'category': currentDraft.category,
         'location': currentDraft.location,
         'incident_details': currentDraft.incidentDetails,
-        'media_attachments':
-            currentDraft.mediaAttachments.map((m) => m.toJson()).toList(),
+        'media_attachments': currentDraft.mediaAttachments
+            .map((m) => m.toJson())
+            .toList(),
         'voice_dispatch': currentDraft.voiceDispatch?.toJson(),
         'is_ai_assisted': currentDraft.isAiAssisted,
         'ai_assisted_headline': currentDraft.aiAssistedHeadline,
@@ -454,7 +467,9 @@ class DraftSyncService {
         driveFileId: uploaded.driveFileId,
         isSyncedWithDrive: !anyMediaFailed,
         driveSyncStatus: anyMediaFailed
-            ? (anyMediaOffline ? DraftSyncStatus.pending : DraftSyncStatus.failed)
+            ? (anyMediaOffline
+                  ? DraftSyncStatus.pending
+                  : DraftSyncStatus.failed)
             : DraftSyncStatus.synced,
         lastSyncedAt: DateTime.now(),
         syncErrorMessage: anyMediaFailed ? lastMediaError : null,
@@ -475,8 +490,9 @@ class DraftSyncService {
 
       final failedDraft = currentDraft.copyWith(
         isSyncedWithDrive: false,
-        driveSyncStatus:
-            isOffline ? DraftSyncStatus.pending : DraftSyncStatus.failed,
+        driveSyncStatus: isOffline
+            ? DraftSyncStatus.pending
+            : DraftSyncStatus.failed,
         syncErrorMessage: e.toString(),
       );
 
@@ -509,13 +525,15 @@ class DraftSyncService {
         return 0;
       }
 
-      final targetReporterId = reporterId ??
+      final targetReporterId =
+          reporterId ??
           (_ref.read(currentReporterProvider).asData?.value?.id ?? 'user-001');
 
       List<NewsDraft> pendingDrafts = [];
       try {
-        pendingDrafts =
-            await _draftRepo.getPendingSyncDrafts(reporterId: targetReporterId);
+        pendingDrafts = await _draftRepo.getPendingSyncDrafts(
+          reporterId: targetReporterId,
+        );
       } catch (e) {
         debugPrint('Could not retrieve pending drafts for sync: $e');
         return 0;

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:journalist_app_1/core/errors/google_drive_exceptions.dart';
 import 'package:journalist_app_1/models/news_media.dart';
+import 'package:journalist_app_1/providers/auth_provider.dart';
 import 'package:journalist_app_1/providers/draft_sync_provider.dart';
 import 'package:journalist_app_1/repositories/drive/google_drive_repository_impl.dart';
 import 'package:journalist_app_1/repositories/google_drive_repository.dart';
@@ -57,6 +58,14 @@ final googleDriveRepositoryProvider = Provider<GoogleDriveRepository>((ref) {
 class GoogleDriveNotifier extends Notifier<GoogleDriveState> {
   @override
   GoogleDriveState build() {
+    ref.listen<AuthState>(authStateProvider, (previous, next) {
+      final prevUser = previous?.user?.uuid;
+      final nextUser = next.user?.uuid;
+      if (nextUser != null && nextUser != prevUser) {
+        Future.microtask(() => checkConnectionStatus());
+      }
+    });
+
     // Check initial connection asynchronously
     Future.microtask(() => checkConnectionStatus());
     return const GoogleDriveState();
@@ -64,26 +73,62 @@ class GoogleDriveNotifier extends Notifier<GoogleDriveState> {
 
   GoogleDriveRepository get _repo => ref.read(googleDriveRepositoryProvider);
 
-  /// Checks if an active Drive session is already authorized.
+  String _currentUserKey() {
+    final user = ref.read(authStateProvider).user;
+    if (user != null) {
+      if (user.uuid.isNotEmpty) return user.uuid;
+      if (user.email.isNotEmpty) return user.email;
+    }
+    return 'default';
+  }
+
+  /// Checks if a persisted Drive account exists for the current user and
+  /// restores the connection silently without triggering an interactive picker.
   Future<void> checkConnectionStatus() async {
+    if (!ref.mounted) return;
     try {
-      final email = await _repo.getCurrentAccountEmail();
-      if (email != null && email.isNotEmpty) {
-        final folderId = await _repo.getOrCreateAppFolder(
-          folderName: state.folderName,
+      final userKey = _currentUserKey();
+      final storage = ref.read(secureTokenStorageProvider);
+
+      // Only restore if this user previously connected Google Drive.
+      // Avoids triggering Android Credential Manager's "Choose an account"
+      // bottom sheet on startup when multiple Google accounts exist.
+      final email = await storage.readLinkedGoogleDriveEmail(userKey: userKey);
+      if (!ref.mounted || email == null || email.isEmpty) {
+        return;
+      }
+
+      String? folderId = state.folderId;
+      try {
+        final isAuthorized = await _repo.isDriveAuthorized(
           reporterGoogleEmail: email,
         );
-        state = state.copyWith(
-          isConnected: true,
-          accountEmail: email,
-          folderId: folderId,
-        );
-        await refreshFiles();
-        // Automatically sync pending drafts when Drive connection is verified
-        Future.microtask(() {
-          ref.read(draftSyncServiceProvider).syncAllPendingDrafts();
-        });
+        if (isAuthorized) {
+          folderId = await _repo.getOrCreateAppFolder(
+            folderName: state.folderName,
+            reporterGoogleEmail: email,
+          );
+        }
+      } catch (_) {
+        // Preserve linked email state even if offline/token needs silent refresh later
       }
+      if (!ref.mounted) return;
+
+      state = state.copyWith(
+        isConnected: true,
+        accountEmail: email,
+        folderId: folderId,
+      );
+
+      try {
+        await refreshFiles();
+      } catch (_) {}
+
+      // Automatically sync pending drafts when Drive connection is verified
+      Future.microtask(() {
+        if (!ref.mounted) return;
+        ref.read(draftSyncServiceProvider).syncAllPendingDrafts();
+      });
     } catch (_) {
       // Ignored during passive background check
     }
@@ -97,6 +142,11 @@ class GoogleDriveNotifier extends Notifier<GoogleDriveState> {
       await _repo.authorizeDrive(reporterGoogleEmail: emailHint);
       final realEmail = (await _repo.getCurrentAccountEmail()) ??
           (emailHint.isNotEmpty ? emailHint : 'connected@google.com');
+
+      await ref.read(secureTokenStorageProvider).saveLinkedGoogleDriveEmail(
+        userKey: _currentUserKey(),
+        googleEmail: realEmail,
+      );
 
       final folderId = await _repo.getOrCreateAppFolder(
         folderName: state.folderName,
@@ -117,6 +167,7 @@ class GoogleDriveNotifier extends Notifier<GoogleDriveState> {
       );
       // Automatically sync pending drafts upon fresh connection
       Future.microtask(() {
+        if (!ref.mounted) return;
         ref.read(draftSyncServiceProvider).syncAllPendingDrafts();
       });
       return true;
@@ -166,6 +217,9 @@ class GoogleDriveNotifier extends Notifier<GoogleDriveState> {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       await _repo.disconnectDrive();
+      await ref
+          .read(secureTokenStorageProvider)
+          .clearLinkedGoogleDriveEmail(userKey: _currentUserKey());
       state = const GoogleDriveState();
     } catch (e) {
       state = state.copyWith(

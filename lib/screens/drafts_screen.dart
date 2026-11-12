@@ -4,15 +4,13 @@ import 'package:journalist_app_1/core/constants/app_colors.dart';
 import 'package:journalist_app_1/models/news_draft.dart';
 import 'package:journalist_app_1/models/news_media.dart';
 import 'package:journalist_app_1/providers/app_providers.dart';
+import 'package:journalist_app_1/services/offline_submission_queue_service.dart';
 
 /// Screen displaying offline SQLite news drafts with Edit, Delete, and New Story actions.
 class DraftsScreen extends ConsumerWidget {
   final Function(NewsDraft)? onSelectDraft;
 
-  const DraftsScreen({
-    super.key,
-    this.onSelectDraft,
-  });
+  const DraftsScreen({super.key, this.onSelectDraft});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -74,6 +72,8 @@ class DraftsScreen extends ConsumerWidget {
         : 'Untitled Field Draft';
     final category = draft.category.isNotEmpty ? draft.category : 'General';
     final dateStr = _formatTimestamp(draft.lastSavedAt);
+    final isHeldForAutoSubmit =
+        ref.watch(offlineSubmissionQueueProvider).contains(draft.id);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -111,7 +111,10 @@ class DraftsScreen extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.navyPrimary.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(6),
@@ -128,15 +131,55 @@ class DraftsScreen extends ConsumerWidget {
                   ),
                   Row(
                     children: [
+                      if (isHeldForAutoSubmit) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.statusPending.withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(
+                                Icons.schedule_send_rounded,
+                                size: 11,
+                                color: AppColors.statusPending,
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                'Held • Auto-Submit',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.statusPending,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                      ],
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF64748B).withValues(alpha: 0.12),
+                          color: const Color(
+                            0xFF64748B,
+                          ).withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Row(
                           children: [
-                            Icon(Icons.save_outlined, size: 12, color: Color(0xFF64748B)),
+                            Icon(
+                              Icons.save_outlined,
+                              size: 12,
+                              color: Color(0xFF64748B),
+                            ),
                             SizedBox(width: 4),
                             Text(
                               'SQLite Draft',
@@ -153,8 +196,11 @@ class DraftsScreen extends ConsumerWidget {
                       _buildDriveSyncBadge(context, ref, draft),
                       const SizedBox(width: 4),
                       IconButton(
-                        icon: const Icon(Icons.delete_outline_rounded,
-                            size: 20, color: Colors.red),
+                        icon: const Icon(
+                          Icons.delete_outline_rounded,
+                          size: 20,
+                          color: Colors.red,
+                        ),
                         tooltip: 'Delete Draft',
                         visualDensity: VisualDensity.compact,
                         padding: EdgeInsets.zero,
@@ -201,8 +247,11 @@ class DraftsScreen extends ConsumerWidget {
                   Row(
                     children: [
                       if (draft.location.isNotEmpty) ...[
-                        Icon(Icons.location_on_outlined,
-                            size: 13, color: Colors.grey.shade500),
+                        Icon(
+                          Icons.location_on_outlined,
+                          size: 13,
+                          color: Colors.grey.shade500,
+                        ),
                         const SizedBox(width: 3),
                         Text(
                           draft.location,
@@ -214,12 +263,16 @@ class DraftsScreen extends ConsumerWidget {
                         ),
                         const SizedBox(width: 8),
                       ],
-                      if (draft.mediaAttachments
-                          .any((m) => m.mediaType == MediaType.image)) ...[
+                      if (draft.mediaAttachments.any(
+                        (m) => m.mediaType == MediaType.image,
+                      )) ...[
                         Row(
                           children: [
-                            Icon(Icons.photo_outlined,
-                                size: 12, color: Colors.grey.shade600),
+                            Icon(
+                              Icons.photo_outlined,
+                              size: 12,
+                              color: Colors.grey.shade600,
+                            ),
                             const SizedBox(width: 3),
                             Text(
                               '${draft.mediaAttachments.where((m) => m.mediaType == MediaType.image).length}',
@@ -233,12 +286,16 @@ class DraftsScreen extends ConsumerWidget {
                         ),
                         const SizedBox(width: 8),
                       ],
-                      if (draft.mediaAttachments
-                          .any((m) => m.mediaType == MediaType.video)) ...[
+                      if (draft.mediaAttachments.any(
+                        (m) => m.mediaType == MediaType.video,
+                      )) ...[
                         Row(
                           children: [
-                            Icon(Icons.videocam_outlined,
-                                size: 13, color: Colors.grey.shade600),
+                            Icon(
+                              Icons.videocam_outlined,
+                              size: 13,
+                              color: Colors.grey.shade600,
+                            ),
                             const SizedBox(width: 3),
                             Text(
                               '${draft.mediaAttachments.where((m) => m.mediaType == MediaType.video).length}',
@@ -253,12 +310,16 @@ class DraftsScreen extends ConsumerWidget {
                         const SizedBox(width: 8),
                       ],
                       if (draft.voiceDispatch != null ||
-                          draft.mediaAttachments
-                              .any((m) => m.mediaType == MediaType.audio))
+                          draft.mediaAttachments.any(
+                            (m) => m.mediaType == MediaType.audio,
+                          ))
                         Row(
                           children: [
-                            Icon(Icons.mic_none_rounded,
-                                size: 13, color: Colors.grey.shade600),
+                            Icon(
+                              Icons.mic_none_rounded,
+                              size: 13,
+                              color: Colors.grey.shade600,
+                            ),
                             const SizedBox(width: 2),
                             Text(
                               draft.voiceDispatch?.durationSeconds != null
@@ -276,8 +337,11 @@ class DraftsScreen extends ConsumerWidget {
                   ),
                   Row(
                     children: [
-                      Icon(Icons.access_time_rounded,
-                          size: 12, color: Colors.grey.shade500),
+                      Icon(
+                        Icons.access_time_rounded,
+                        size: 12,
+                        color: Colors.grey.shade500,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         dateStr,
@@ -299,7 +363,10 @@ class DraftsScreen extends ConsumerWidget {
   }
 
   Widget _buildDriveSyncBadge(
-      BuildContext context, WidgetRef ref, NewsDraft draft) {
+    BuildContext context,
+    WidgetRef ref,
+    NewsDraft draft,
+  ) {
     Color color;
     IconData icon;
     String text;
@@ -327,11 +394,13 @@ class DraftsScreen extends ConsumerWidget {
         break;
     }
 
-    final isStuckSyncing = draft.driveSyncStatus == DraftSyncStatus.syncing &&
+    final isStuckSyncing =
+        draft.driveSyncStatus == DraftSyncStatus.syncing &&
         !ref.read(draftSyncServiceProvider).isSyncing(draft.id);
 
     return InkWell(
-      onTap: (draft.driveSyncStatus == DraftSyncStatus.failed ||
+      onTap:
+          (draft.driveSyncStatus == DraftSyncStatus.failed ||
               draft.driveSyncStatus == DraftSyncStatus.pending ||
               isStuckSyncing)
           ? () async {
@@ -375,7 +444,9 @@ class DraftsScreen extends ConsumerWidget {
       context: context,
       builder: (dialogCtx) => AlertDialog(
         title: const Text('Delete Draft?'),
-        content: Text('Are you sure you want to delete "${draft.headline.isEmpty ? 'Untitled Draft' : draft.headline}"? This cannot be undone.'),
+        content: Text(
+          'Are you sure you want to delete "${draft.headline.isEmpty ? 'Untitled Draft' : draft.headline}"? This cannot be undone.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogCtx).pop(),

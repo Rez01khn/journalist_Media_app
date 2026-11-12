@@ -334,12 +334,8 @@ void main() {
         expect(find.text('Attached Photos (1)'), findsOneWidget);
         expect(find.text('Attached Video (1)'), findsOneWidget);
         expect(find.text('Voice Dispatch'), findsOneWidget);
-        expect(
-          find.text('Submission unavailable until backend integration'),
-          findsOneWidget,
-        );
 
-        // Tap Confirm Submission -> Confirmation Dialog explains editorial review & backend unavailable
+        // Tap Confirm Submission -> Confirmation Dialog explains editorial review & offline hold
         await tester.tap(
           find.byKey(const ValueKey('preview_confirm_submission_btn')),
         );
@@ -352,15 +348,15 @@ void main() {
           findsOneWidget,
         );
         expect(
-          find.text('Submission unavailable until backend integration'),
-          findsNWidgets(2),
+          find.textContaining('saved in Drafts and held automatically'),
+          findsOneWidget,
         );
 
-        // Verify Submit to Editor action inside dialog is disabled
+        // Verify Submit to Editor action inside dialog is enabled
         final submitBtn = tester.widget<ElevatedButton>(
-          find.byKey(const ValueKey('dialog_confirm_submit_disabled_btn')),
+          find.byKey(const ValueKey('dialog_confirm_submit_btn')),
         );
-        expect(submitBtn.onPressed, isNull);
+        expect(submitBtn.onPressed, isNotNull);
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump();

@@ -154,7 +154,8 @@ class NewsDraft {
       category: json['category'] as String? ?? '',
       location: json['location'] as String? ?? '',
       incidentDetails: json['incident_details'] as String? ?? '',
-      mediaAttachments: (json['media_attachments'] as List<dynamic>?)
+      mediaAttachments:
+          (json['media_attachments'] as List<dynamic>?)
               ?.map((item) => NewsMedia.fromJson(item as Map<String, dynamic>))
               .toList() ??
           const [],
@@ -178,4 +179,3 @@ class NewsDraft {
     );
   }
 }
-

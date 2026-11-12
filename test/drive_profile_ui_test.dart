@@ -1,9 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:journalist_app_1/models/auth_session.dart';
+import 'package:journalist_app_1/models/auth_user.dart';
+import 'package:journalist_app_1/providers/auth_provider.dart';
 import 'package:journalist_app_1/providers/google_drive_provider.dart';
 import 'package:journalist_app_1/repositories/mock/mock_repositories.dart';
 import 'package:journalist_app_1/screens/profile_screen.dart';
+
+import 'login_integration_test.dart' show InMemorySecureTokenStorage;
+
+class _AuthenticatedTestAuthNotifier extends AuthNotifier {
+  @override
+  AuthState build() {
+    return const AuthState(
+      status: AuthStatus.authenticated,
+      session: AuthSession(
+        accessToken: 'test_token',
+        user: AuthUser(
+          id: 4,
+          uuid: 'uuid-rep-001',
+          userCode: 'REP-2026-084',
+          name: 'Rezwan Ahmed',
+          email: 'reporter@newsdesk.local',
+          role: PortalUserRole.reporter,
+          designation: 'Staff Reporter',
+          assignedArea: 'Dhaka Metro',
+        ),
+      ),
+    );
+  }
+}
 
 void main() {
   testWidgets(
@@ -21,6 +48,10 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            secureTokenStorageProvider.overrideWithValue(
+              InMemorySecureTokenStorage(),
+            ),
+            authStateProvider.overrideWith(_AuthenticatedTestAuthNotifier.new),
             googleDriveRepositoryProvider.overrideWithValue(mockRepo),
           ],
           child: const MaterialApp(home: ProfileScreen()),

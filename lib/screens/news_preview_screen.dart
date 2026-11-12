@@ -7,6 +7,7 @@ import 'package:journalist_app_1/models/news_draft.dart';
 import 'package:journalist_app_1/models/news_media.dart';
 import 'package:journalist_app_1/providers/app_providers.dart';
 import 'package:journalist_app_1/services/news_validation_service.dart';
+import 'package:journalist_app_1/services/offline_submission_queue_service.dart';
 import 'package:video_player/video_player.dart';
 
 /// Professional editorial News Preview screen allowing reporters to inspect
@@ -91,7 +92,8 @@ class _NewsPreviewScreenState extends ConsumerState<NewsPreviewScreen> {
 
     if (!Platform.isAndroid && !Platform.isIOS) {
       setState(
-        () => _videoError = 'Video ready for editorial sync (${video.fileName})',
+        () =>
+            _videoError = 'Video ready for editorial sync (${video.fileName})',
       );
       return;
     }
@@ -109,7 +111,8 @@ class _NewsPreviewScreenState extends ConsumerState<NewsPreviewScreen> {
     } catch (_) {
       if (mounted) {
         setState(
-          () => _videoError = 'Video ready for editorial sync (${video.fileName})',
+          () => _videoError =
+              'Video ready for editorial sync (${video.fileName})',
         );
       }
     }
@@ -143,8 +146,8 @@ class _NewsPreviewScreenState extends ConsumerState<NewsPreviewScreen> {
 
     final totalSecs =
         (voice.durationSeconds != null && voice.durationSeconds! > 0)
-            ? voice.durationSeconds!
-            : 3;
+        ? voice.durationSeconds!
+        : 3;
 
     try {
       if (_audioController == null) {
@@ -187,8 +190,9 @@ class _NewsPreviewScreenState extends ConsumerState<NewsPreviewScreen> {
       }
       setState(() => _isPlayingAudio = true);
       _fallbackAudioTimer?.cancel();
-      _fallbackAudioTimer =
-          Timer.periodic(const Duration(milliseconds: 250), (timer) {
+      _fallbackAudioTimer = Timer.periodic(const Duration(milliseconds: 250), (
+        timer,
+      ) {
         if (!mounted || !_isPlayingAudio) {
           timer.cancel();
           return;
@@ -207,6 +211,23 @@ class _NewsPreviewScreenState extends ConsumerState<NewsPreviewScreen> {
     }
   }
 
+  Future<void> _submitOrQueueStory() async {
+    final outcome = await ref
+        .read(offlineSubmissionQueueProvider.notifier)
+        .submitOrHoldDraft(widget.draft);
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(outcome.message),
+        backgroundColor: outcome.queuedOffline
+            ? AppColors.statusPending
+            : AppColors.statusPublished,
+      ),
+    );
+    Navigator.of(context).pop(outcome.submitted);
+  }
+
   void _showConfirmSubmissionDialog() {
     showDialog(
       context: context,
@@ -214,8 +235,11 @@ class _NewsPreviewScreenState extends ConsumerState<NewsPreviewScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Row(
           children: [
-            Icon(Icons.verified_user_outlined,
-                color: AppColors.navyPrimary, size: 22),
+            Icon(
+              Icons.verified_user_outlined,
+              color: AppColors.navyPrimary,
+              size: 22,
+            ),
             SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -237,25 +261,28 @@ class _NewsPreviewScreenState extends ConsumerState<NewsPreviewScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFFEF3C7),
+                color: AppColors.navyPrimary.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                  color: const Color(0xFFD97706).withValues(alpha: 0.4),
+                  color: AppColors.navyPrimary.withValues(alpha: 0.2),
                 ),
               ),
               child: const Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.cloud_off_rounded,
-                      color: Color(0xFFD97706), size: 18),
+                  Icon(
+                    Icons.cloud_done_outlined,
+                    color: AppColors.navyPrimary,
+                    size: 18,
+                  ),
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Submission unavailable until backend integration',
+                      'If you are offline, the story will be saved in Drafts and held automatically until internet returns.',
                       style: TextStyle(
                         fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF92400E),
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.navyDark,
                       ),
                     ),
                   ),
@@ -270,11 +297,14 @@ class _NewsPreviewScreenState extends ConsumerState<NewsPreviewScreen> {
             child: const Text('Back to Preview'),
           ),
           ElevatedButton.icon(
-            key: const ValueKey('dialog_confirm_submit_disabled_btn'),
-            onPressed: null,
+            key: const ValueKey('dialog_confirm_submit_btn'),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _submitOrQueueStory();
+            },
             style: ElevatedButton.styleFrom(
-              disabledBackgroundColor: Colors.grey.shade300,
-              disabledForegroundColor: Colors.grey.shade600,
+              backgroundColor: AppColors.navyPrimary,
+              foregroundColor: Colors.white,
             ),
             icon: const Icon(Icons.send_rounded, size: 16),
             label: const Text('Submit to Editor'),
@@ -310,7 +340,11 @@ class _NewsPreviewScreenState extends ConsumerState<NewsPreviewScreen> {
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white, size: 18),
+                    icon: const Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: 18,
+                    ),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                     onPressed: () => Navigator.of(ctx).pop(),
@@ -324,7 +358,11 @@ class _NewsPreviewScreenState extends ConsumerState<NewsPreviewScreen> {
                   ? Image.file(File(photo.localFilePath!), fit: BoxFit.contain)
                   : const Padding(
                       padding: EdgeInsets.all(32),
-                      child: Icon(Icons.broken_image, size: 56, color: Colors.grey),
+                      child: Icon(
+                        Icons.broken_image,
+                        size: 56,
+                        color: Colors.grey,
+                      ),
                     ),
             ),
           ],
@@ -372,10 +410,17 @@ class _NewsPreviewScreenState extends ConsumerState<NewsPreviewScreen> {
         actions: [
           TextButton.icon(
             onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.edit_outlined, color: Colors.white, size: 16),
+            icon: const Icon(
+              Icons.edit_outlined,
+              color: Colors.white,
+              size: 16,
+            ),
             label: const Text(
               'Edit News',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -538,8 +583,11 @@ class _NewsPreviewScreenState extends ConsumerState<NewsPreviewScreen> {
                   children: [
                     const Row(
                       children: [
-                        Icon(Icons.badge_outlined,
-                            color: AppColors.navyPrimary, size: 18),
+                        Icon(
+                          Icons.badge_outlined,
+                          color: AppColors.navyPrimary,
+                          size: 18,
+                        ),
                         SizedBox(width: 8),
                         Text(
                           'Reporter Details',
@@ -594,7 +642,8 @@ class _NewsPreviewScreenState extends ConsumerState<NewsPreviewScreen> {
                     separatorBuilder: (_, __) => const SizedBox(width: 10),
                     itemBuilder: (_, index) {
                       final photo = _photos[index];
-                      final exists = photo.localFilePath != null &&
+                      final exists =
+                          photo.localFilePath != null &&
                           File(photo.localFilePath!).existsSync();
                       return GestureDetector(
                         onTap: () => _showPhotoDialog(photo),
@@ -613,14 +662,19 @@ class _NewsPreviewScreenState extends ConsumerState<NewsPreviewScreen> {
                                   ? Image.file(
                                       File(photo.localFilePath!),
                                       fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => const Center(
-                                        child: Icon(Icons.image_outlined,
-                                            color: Colors.grey),
-                                      ),
+                                      errorBuilder: (_, __, ___) =>
+                                          const Center(
+                                            child: Icon(
+                                              Icons.image_outlined,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
                                     )
                                   : const Center(
-                                      child: Icon(Icons.broken_image,
-                                          color: Colors.grey),
+                                      child: Icon(
+                                        Icons.broken_image,
+                                        color: Colors.grey,
+                                      ),
                                     ),
                               Positioned(
                                 bottom: 4,
@@ -628,7 +682,9 @@ class _NewsPreviewScreenState extends ConsumerState<NewsPreviewScreen> {
                                 right: 4,
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 6, vertical: 2),
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: Colors.black54,
                                     borderRadius: BorderRadius.circular(4),
@@ -636,7 +692,9 @@ class _NewsPreviewScreenState extends ConsumerState<NewsPreviewScreen> {
                                   child: Text(
                                     _formatBytes(photo.fileSizeBytes ?? 0),
                                     style: const TextStyle(
-                                        color: Colors.white, fontSize: 9),
+                                      color: Colors.white,
+                                      fontSize: 9,
+                                    ),
                                     textAlign: TextAlign.center,
                                   ),
                                 ),
@@ -664,10 +722,7 @@ class _NewsPreviewScreenState extends ConsumerState<NewsPreviewScreen> {
 
               // Voice Dispatch Preview
               if (widget.draft.voiceDispatch != null) ...[
-                _buildSectionHeader(
-                  'Voice Dispatch',
-                  Icons.mic_none_rounded,
-                ),
+                _buildSectionHeader('Voice Dispatch', Icons.mic_none_rounded),
                 const SizedBox(height: 8),
                 _buildVoicePreviewCard(widget.draft.voiceDispatch!),
                 const SizedBox(height: 14),
@@ -697,16 +752,21 @@ class _NewsPreviewScreenState extends ConsumerState<NewsPreviewScreen> {
               Container(
                 width: double.infinity,
                 margin: const EdgeInsets.only(bottom: 10),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFEF3C7),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Row(
                   children: [
-                    Icon(Icons.info_outline,
-                        color: Color(0xFFD97706), size: 15),
+                    Icon(
+                      Icons.info_outline,
+                      color: Color(0xFFD97706),
+                      size: 15,
+                    ),
                     SizedBox(width: 6),
                     Expanded(
                       child: Text(
@@ -769,8 +829,9 @@ class _NewsPreviewScreenState extends ConsumerState<NewsPreviewScreen> {
                       height: 46,
                       child: ElevatedButton(
                         key: const ValueKey('preview_confirm_submission_btn'),
-                        onPressed:
-                            isValid ? _showConfirmSubmissionDialog : null,
+                        onPressed: isValid
+                            ? _showConfirmSubmissionDialog
+                            : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.navyPrimary,
                           foregroundColor: Colors.white,
@@ -862,7 +923,9 @@ class _NewsPreviewScreenState extends ConsumerState<NewsPreviewScreen> {
                         child: Container(
                           color: Colors.black54,
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -883,12 +946,16 @@ class _NewsPreviewScreenState extends ConsumerState<NewsPreviewScreen> {
                                   Text(
                                     _formatDuration(ctrl.value.position),
                                     style: const TextStyle(
-                                        color: Colors.white, fontSize: 10),
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                    ),
                                   ),
                                   Text(
                                     _formatDuration(ctrl.value.duration),
                                     style: const TextStyle(
-                                        color: Colors.white70, fontSize: 10),
+                                      color: Colors.white70,
+                                      fontSize: 10,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -904,14 +971,19 @@ class _NewsPreviewScreenState extends ConsumerState<NewsPreviewScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.videocam_rounded,
-                              size: 42, color: Colors.white70),
+                          const Icon(
+                            Icons.videocam_rounded,
+                            size: 42,
+                            color: Colors.white70,
+                          ),
                           const SizedBox(height: 8),
                           Text(
                             _videoError ?? 'Loading video preview...',
                             textAlign: TextAlign.center,
                             style: const TextStyle(
-                                color: Colors.white70, fontSize: 12),
+                              color: Colors.white70,
+                              fontSize: 12,
+                            ),
                           ),
                         ],
                       ),
@@ -950,8 +1022,8 @@ class _NewsPreviewScreenState extends ConsumerState<NewsPreviewScreen> {
   Widget _buildVoicePreviewCard(NewsMedia voice) {
     final totalSecs =
         (voice.durationSeconds != null && voice.durationSeconds! > 0)
-            ? voice.durationSeconds!
-            : (_audioDuration.inSeconds > 0 ? _audioDuration.inSeconds : 1);
+        ? voice.durationSeconds!
+        : (_audioDuration.inSeconds > 0 ? _audioDuration.inSeconds : 1);
     final totalMs = _audioDuration.inMilliseconds > 0
         ? _audioDuration.inMilliseconds
         : (totalSecs * 1000);
@@ -1008,8 +1080,10 @@ class _NewsPreviewScreenState extends ConsumerState<NewsPreviewScreen> {
                     const SizedBox(height: 2),
                     Text(
                       'Duration: ${_formatMmSs(totalSecs)} • Size: ${_formatBytes(voice.fileSizeBytes ?? 0)}',
-                      style:
-                          TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade600,
+                      ),
                     ),
                   ],
                 ),
@@ -1027,8 +1101,9 @@ class _NewsPreviewScreenState extends ConsumerState<NewsPreviewScreen> {
                 child: SliderTheme(
                   data: SliderTheme.of(context).copyWith(
                     trackHeight: 3,
-                    thumbShape:
-                        const RoundSliderThumbShape(enabledThumbRadius: 6),
+                    thumbShape: const RoundSliderThumbShape(
+                      enabledThumbRadius: 6,
+                    ),
                   ),
                   child: Slider(
                     value: progress,
@@ -1108,12 +1183,7 @@ class _NewsPreviewScreenState extends ConsumerState<NewsPreviewScreen> {
     );
   }
 
-  Widget _buildTagPill(
-    String text,
-    Color bg,
-    Color fg, {
-    IconData? icon,
-  }) {
+  Widget _buildTagPill(String text, Color bg, Color fg, {IconData? icon}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -1140,4 +1210,3 @@ class _NewsPreviewScreenState extends ConsumerState<NewsPreviewScreen> {
     );
   }
 }
-

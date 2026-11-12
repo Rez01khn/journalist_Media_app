@@ -2,15 +2,46 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:journalist_app_1/main.dart';
+import 'package:journalist_app_1/models/auth_session.dart';
+import 'package:journalist_app_1/models/auth_user.dart';
+import 'package:journalist_app_1/providers/auth_provider.dart';
+
+class _AuthenticatedSmokeAuthNotifier extends AuthNotifier {
+  @override
+  AuthState build() {
+    return const AuthState(
+      status: AuthStatus.authenticated,
+      session: AuthSession(
+        accessToken: 'smoke_test_token',
+        user: AuthUser(
+          id: 4,
+          uuid: 'uuid-smoke-001',
+          userCode: 'REP-2026-084',
+          name: 'Rezwan Ahmed',
+          email: 'reporter@newsdesk.local',
+          role: PortalUserRole.reporter,
+          designation: 'Staff Reporter',
+          assignedArea: 'Dhaka Metro',
+        ),
+      ),
+    );
+  }
+
+  @override
+  Future<void> restoreSession() async {}
+}
 
 void main() {
   testWidgets('Bottom navigation smoke and tab switching test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
     await tester.pumpWidget(
-      const ProviderScope(
-        child: JournalistApp(),
+      ProviderScope(
+        overrides: [
+          authStateProvider.overrideWith(_AuthenticatedSmokeAuthNotifier.new),
+        ],
+        child: const JournalistApp(),
       ),
     );
+    await tester.pumpAndSettle();
 
     // Verify all four bottom navigation destinations exist
     expect(find.text('Home'), findsOneWidget);
@@ -25,9 +56,9 @@ void main() {
     await tester.tap(find.byIcon(Icons.person_outline_rounded));
     await tester.pumpAndSettle();
 
-    // Verify Profile screen is displayed
+    // Verify Profile screen displays authenticated user
     expect(find.text('Reporter Profile'), findsOneWidget);
-    expect(find.text('Rezwan Karim'), findsOneWidget);
+    expect(find.text('Rezwan Ahmed'), findsOneWidget);
 
     // Tap 'Submit News' tab
     await tester.tap(find.byIcon(Icons.post_add_outlined));

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:journalist_app_1/providers/auth_provider.dart';
 import 'package:journalist_app_1/providers/draft_sync_provider.dart';
+import 'package:journalist_app_1/services/offline_submission_queue_service.dart';
 import 'package:journalist_app_1/screens/dashboard_screen.dart';
 import 'package:journalist_app_1/screens/my_news_screen.dart';
 import 'package:journalist_app_1/screens/profile_screen.dart';
@@ -11,10 +13,7 @@ import 'package:journalist_app_1/screens/submit_news_screen.dart';
 class MainNavigationScreen extends ConsumerStatefulWidget {
   final int initialIndex;
 
-  const MainNavigationScreen({
-    super.key,
-    this.initialIndex = 0,
-  });
+  const MainNavigationScreen({super.key, this.initialIndex = 0});
 
   @override
   ConsumerState<MainNavigationScreen> createState() =>
@@ -41,6 +40,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         ref.read(draftSyncServiceProvider);
+        ref.read(offlineSubmissionQueueProvider);
+        ref.read(authStateProvider.notifier).restoreSession();
       }
     });
   }
@@ -71,18 +72,12 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
 
     return Scaffold(
       // IndexedStack preserves state and scroll positions of each screen when switching
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
-      ),
+      body: IndexedStack(index: _currentIndex, children: _screens),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
           border: Border(
-            top: BorderSide(
-              color: Colors.grey.shade200,
-              width: 1,
-            ),
+            top: BorderSide(color: Colors.grey.shade200, width: 1),
           ),
           boxShadow: [
             BoxShadow(
@@ -96,36 +91,30 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
           data: NavigationBarThemeData(
             backgroundColor: Colors.white,
             indicatorColor: navyPrimary.withValues(alpha: 0.12),
-            labelTextStyle: WidgetStateProperty.resolveWith<TextStyle>(
-              (Set<WidgetState> states) {
-                if (states.contains(WidgetState.selected)) {
-                  return const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: navyDark,
-                  );
-                }
-                return TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey.shade600,
+            labelTextStyle: WidgetStateProperty.resolveWith<TextStyle>((
+              Set<WidgetState> states,
+            ) {
+              if (states.contains(WidgetState.selected)) {
+                return const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: navyDark,
                 );
-              },
-            ),
-            iconTheme: WidgetStateProperty.resolveWith<IconThemeData>(
-              (Set<WidgetState> states) {
-                if (states.contains(WidgetState.selected)) {
-                  return const IconThemeData(
-                    color: navyPrimary,
-                    size: 24,
-                  );
-                }
-                return IconThemeData(
-                  color: Colors.grey.shade600,
-                  size: 22,
-                );
-              },
-            ),
+              }
+              return TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey.shade600,
+              );
+            }),
+            iconTheme: WidgetStateProperty.resolveWith<IconThemeData>((
+              Set<WidgetState> states,
+            ) {
+              if (states.contains(WidgetState.selected)) {
+                return const IconThemeData(color: navyPrimary, size: 24);
+              }
+              return IconThemeData(color: Colors.grey.shade600, size: 22);
+            }),
           ),
           child: NavigationBar(
             selectedIndex: _currentIndex,
@@ -160,4 +149,3 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
     );
   }
 }
-

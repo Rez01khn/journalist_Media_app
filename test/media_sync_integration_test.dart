@@ -85,7 +85,9 @@ class ControllableGoogleDriveRepository extends MockGoogleDriveRepository {
   }) async {
     draftUploadCalls++;
     if (simulateOffline) {
-      throw const SocketException('Simulated network drop during draft JSON upload');
+      throw const SocketException(
+        'Simulated network drop during draft JSON upload',
+      );
     }
     return super.uploadDraftFile(
       localFilePath: localFilePath,
@@ -135,9 +137,8 @@ void main() {
     return (db, SqliteDraftRepository(DatabaseService(db)));
   }
 
-  Future<(NewsMedia photo, NewsMedia video, NewsMedia voice)> createAllThreeMedia(
-    String draftId,
-  ) async {
+  Future<(NewsMedia photo, NewsMedia video, NewsMedia voice)>
+  createAllThreeMedia(String draftId) async {
     final rawPhoto = File(p.join(tempDir.path, 'raw_${draftId}_photo.jpg'));
     await rawPhoto.writeAsBytes(List<int>.filled(512, 11));
     final savedPhoto = await mediaStorage.persistDraftPhoto(
@@ -243,8 +244,9 @@ void main() {
         );
 
         await draftRepo.saveDraft(draft);
-        final synced =
-            await container.read(draftSyncServiceProvider).syncDraft(draft);
+        final synced = await container
+            .read(draftSyncServiceProvider)
+            .syncDraft(draft);
 
         expect(synced.driveSyncStatus, equals(DraftSyncStatus.synced));
         expect(synced.isSyncedWithDrive, isTrue);
@@ -281,7 +283,9 @@ void main() {
         expect(restored, isNotNull);
         expect(restored!.mediaAttachments.length, equals(2));
         expect(
-          restored.mediaAttachments.every((m) => m.isUploadedToDrive && m.driveFileId != null),
+          restored.mediaAttachments.every(
+            (m) => m.isUploadedToDrive && m.driveFileId != null,
+          ),
           isTrue,
         );
         expect(restored.voiceDispatch, isNotNull);
@@ -316,7 +320,9 @@ void main() {
             .read(googleDriveStateProvider.notifier)
             .connectAccount(preferredEmail: 'reporter1@news.bd');
 
-        final (photo, video, voice) = await createAllThreeMedia('draft_net_drop');
+        final (photo, video, voice) = await createAllThreeMedia(
+          'draft_net_drop',
+        );
         final draft = NewsDraft(
           id: 'draft_net_drop',
           reporterId: 'user-001',
@@ -330,8 +336,9 @@ void main() {
         );
 
         await draftRepo.saveDraft(draft);
-        final offlineResult =
-            await container.read(draftSyncServiceProvider).syncDraft(draft);
+        final offlineResult = await container
+            .read(draftSyncServiceProvider)
+            .syncDraft(draft);
 
         expect(offlineResult.driveSyncStatus, equals(DraftSyncStatus.pending));
         expect(offlineResult.isSyncedWithDrive, isFalse);
@@ -419,204 +426,207 @@ void main() {
       },
     );
 
-    test(
-      '4. Replacing & Removing Attachments Before and After Sync',
-      () async {
-        final (db, draftRepo) = await createSqliteRepo();
-        addTearDown(db.close);
-        final driveRepo = ControllableGoogleDriveRepository();
+    test('4. Replacing & Removing Attachments Before and After Sync', () async {
+      final (db, draftRepo) = await createSqliteRepo();
+      addTearDown(db.close);
+      final driveRepo = ControllableGoogleDriveRepository();
 
-        final container = ProviderContainer(
-          overrides: [
-            sqliteDraftRepositoryProvider.overrideWithValue(draftRepo),
-            draftRepositoryProvider.overrideWithValue(draftRepo),
-            googleDriveRepositoryProvider.overrideWithValue(driveRepo),
-          ],
-        );
-        addTearDown(container.dispose);
+      final container = ProviderContainer(
+        overrides: [
+          sqliteDraftRepositoryProvider.overrideWithValue(draftRepo),
+          draftRepositoryProvider.overrideWithValue(draftRepo),
+          googleDriveRepositoryProvider.overrideWithValue(driveRepo),
+        ],
+      );
+      addTearDown(container.dispose);
 
-        await container
-            .read(googleDriveStateProvider.notifier)
-            .connectAccount(preferredEmail: 'reporter1@news.bd');
+      await container
+          .read(googleDriveStateProvider.notifier)
+          .connectAccount(preferredEmail: 'reporter1@news.bd');
 
-        final (photo, video, voice) = await createAllThreeMedia('draft_replace');
-        final draft = NewsDraft(
-          id: 'draft_replace',
-          reporterId: 'user-001',
-          headline: 'Replacement Verification',
-          category: 'Politics',
-          location: 'Rajshahi',
-          incidentDetails: 'Testing replace/remove.',
-          mediaAttachments: [photo, video],
-          voiceDispatch: voice,
-          lastSavedAt: DateTime.now(),
-        );
+      final (photo, video, voice) = await createAllThreeMedia('draft_replace');
+      final draft = NewsDraft(
+        id: 'draft_replace',
+        reporterId: 'user-001',
+        headline: 'Replacement Verification',
+        category: 'Politics',
+        location: 'Rajshahi',
+        incidentDetails: 'Testing replace/remove.',
+        mediaAttachments: [photo, video],
+        voiceDispatch: voice,
+        lastSavedAt: DateTime.now(),
+      );
 
-        await draftRepo.saveDraft(draft);
-        final synced =
-            await container.read(draftSyncServiceProvider).syncDraft(draft);
-        final oldPhotoDriveId = synced.mediaAttachments.first.driveFileId!;
+      await draftRepo.saveDraft(draft);
+      final synced = await container
+          .read(draftSyncServiceProvider)
+          .syncDraft(draft);
+      final oldPhotoDriveId = synced.mediaAttachments.first.driveFileId!;
 
-        // Remove synced photo on Drive & replace video
-        await driveRepo.deleteMediaFromReporterDrive(
-          driveFileId: oldPhotoDriveId,
-          reporterGoogleEmail: 'reporter1@news.bd',
-        );
+      // Remove synced photo on Drive & replace video
+      await driveRepo.deleteMediaFromReporterDrive(
+        driveFileId: oldPhotoDriveId,
+        reporterGoogleEmail: 'reporter1@news.bd',
+      );
 
-        final replacementVideoFile = File(p.join(tempDir.path, 'new_clip.mp4'));
-        await replacementVideoFile.writeAsBytes(List<int>.filled(3072, 9));
-        final savedNewVideo = await mediaStorage.persistDraftVideo(
-          sourceFile: replacementVideoFile,
-          draftId: 'draft_replace',
-        );
-        final replacementVideo = NewsMedia(
-          id: 'video_replacement_2',
-          fileName: p.basename(savedNewVideo.path),
-          localFilePath: savedNewVideo.path,
-          mimeType: 'video/mp4',
-          fileSizeBytes: savedNewVideo.lengthSync(),
-          mediaType: MediaType.video,
-          createdAt: DateTime.now(),
-        );
+      final replacementVideoFile = File(p.join(tempDir.path, 'new_clip.mp4'));
+      await replacementVideoFile.writeAsBytes(List<int>.filled(3072, 9));
+      final savedNewVideo = await mediaStorage.persistDraftVideo(
+        sourceFile: replacementVideoFile,
+        draftId: 'draft_replace',
+      );
+      final replacementVideo = NewsMedia(
+        id: 'video_replacement_2',
+        fileName: p.basename(savedNewVideo.path),
+        localFilePath: savedNewVideo.path,
+        mimeType: 'video/mp4',
+        fileSizeBytes: savedNewVideo.lengthSync(),
+        mediaType: MediaType.video,
+        createdAt: DateTime.now(),
+      );
 
-        final oldVideo = synced.mediaAttachments[1];
-        await mediaStorage.deleteLocalMedia(oldVideo.localFilePath);
-        await driveRepo.deleteMediaFromReporterDrive(
-          driveFileId: oldVideo.driveFileId!,
-          reporterGoogleEmail: 'reporter1@news.bd',
-        );
+      final oldVideo = synced.mediaAttachments[1];
+      await mediaStorage.deleteLocalMedia(oldVideo.localFilePath);
+      await driveRepo.deleteMediaFromReporterDrive(
+        driveFileId: oldVideo.driveFileId!,
+        reporterGoogleEmail: 'reporter1@news.bd',
+      );
 
-        final updatedDraft = synced.copyWith(
-          mediaAttachments: [replacementVideo],
-          clearVoiceDispatch: true,
-        );
-        await driveRepo.deleteMediaFromReporterDrive(
-          driveFileId: synced.voiceDispatch!.driveFileId!,
-          reporterGoogleEmail: 'reporter1@news.bd',
-        );
+      final updatedDraft = synced.copyWith(
+        mediaAttachments: [replacementVideo],
+        clearVoiceDispatch: true,
+      );
+      await driveRepo.deleteMediaFromReporterDrive(
+        driveFileId: synced.voiceDispatch!.driveFileId!,
+        reporterGoogleEmail: 'reporter1@news.bd',
+      );
 
-        await draftRepo.saveDraft(updatedDraft);
-        final resynced = await container
-            .read(draftSyncServiceProvider)
-            .syncDraft(updatedDraft);
+      await draftRepo.saveDraft(updatedDraft);
+      final resynced = await container
+          .read(draftSyncServiceProvider)
+          .syncDraft(updatedDraft);
 
-        expect(resynced.driveSyncStatus, equals(DraftSyncStatus.synced));
-        expect(resynced.mediaAttachments.length, equals(1));
-        expect(
-          resynced.mediaAttachments.first.id,
-          equals('video_replacement_2'),
-        );
-        expect(resynced.voiceDispatch, isNull);
+      expect(resynced.driveSyncStatus, equals(DraftSyncStatus.synced));
+      expect(resynced.mediaAttachments.length, equals(1));
+      expect(resynced.mediaAttachments.first.id, equals('video_replacement_2'));
+      expect(resynced.voiceDispatch, isNull);
 
-        final driveFiles = await driveRepo.listFiles(
-          reporterGoogleEmail: 'reporter1@news.bd',
-        );
-        expect(driveFiles.any((f) => f.driveFileId == oldPhotoDriveId), isFalse);
-        expect(
-          driveFiles.any((f) => f.driveFileId == resynced.mediaAttachments.first.driveFileId),
-          isTrue,
-        );
-      },
-    );
+      final driveFiles = await driveRepo.listFiles(
+        reporterGoogleEmail: 'reporter1@news.bd',
+      );
+      expect(driveFiles.any((f) => f.driveFileId == oldPhotoDriveId), isFalse);
+      expect(
+        driveFiles.any(
+          (f) => f.driveFileId == resynced.mediaAttachments.first.driveFileId,
+        ),
+        isTrue,
+      );
+    });
 
-    test(
-      '5. Cross-Draft Isolation & Google Account Switch Isolation',
-      () async {
-        final (db, draftRepo) = await createSqliteRepo();
-        addTearDown(db.close);
-        final driveRepo = ControllableGoogleDriveRepository();
+    test('5. Cross-Draft Isolation & Google Account Switch Isolation', () async {
+      final (db, draftRepo) = await createSqliteRepo();
+      addTearDown(db.close);
+      final driveRepo = ControllableGoogleDriveRepository();
 
-        final container = ProviderContainer(
-          overrides: [
-            sqliteDraftRepositoryProvider.overrideWithValue(draftRepo),
-            draftRepositoryProvider.overrideWithValue(draftRepo),
-            googleDriveRepositoryProvider.overrideWithValue(driveRepo),
-          ],
-        );
-        addTearDown(container.dispose);
+      final container = ProviderContainer(
+        overrides: [
+          sqliteDraftRepositoryProvider.overrideWithValue(draftRepo),
+          draftRepositoryProvider.overrideWithValue(draftRepo),
+          googleDriveRepositoryProvider.overrideWithValue(driveRepo),
+        ],
+      );
+      addTearDown(container.dispose);
 
-        // Reporter 1 connects and syncs Draft A
-        await container
-            .read(googleDriveStateProvider.notifier)
-            .connectAccount(preferredEmail: 'reporterA@news.bd');
+      // Reporter 1 connects and syncs Draft A
+      await container
+          .read(googleDriveStateProvider.notifier)
+          .connectAccount(preferredEmail: 'reporterA@news.bd');
 
-        final (photoA, _, voiceA) = await createAllThreeMedia('draft_A');
-        final draftA = NewsDraft(
-          id: 'draft_A',
-          reporterId: 'user-001',
-          headline: 'Reporter A Exclusive',
-          category: 'National',
-          location: 'Barishal',
-          incidentDetails: 'Draft A media',
-          mediaAttachments: [photoA],
-          voiceDispatch: voiceA,
-          lastSavedAt: DateTime.now(),
-        );
-        final (photoB, videoB, _) = await createAllThreeMedia('draft_B');
-        final draftB = NewsDraft(
-          id: 'draft_B',
-          reporterId: 'user-001',
-          headline: 'Reporter B Active Draft',
-          category: 'Economy',
-          location: 'Chattogram',
-          incidentDetails: 'Draft B media',
-          mediaAttachments: [photoB, videoB],
-          lastSavedAt: DateTime.now(),
-        );
+      final (photoA, _, voiceA) = await createAllThreeMedia('draft_A');
+      final draftA = NewsDraft(
+        id: 'draft_A',
+        reporterId: 'user-001',
+        headline: 'Reporter A Exclusive',
+        category: 'National',
+        location: 'Barishal',
+        incidentDetails: 'Draft A media',
+        mediaAttachments: [photoA],
+        voiceDispatch: voiceA,
+        lastSavedAt: DateTime.now(),
+      );
+      final (photoB, videoB, _) = await createAllThreeMedia('draft_B');
+      final draftB = NewsDraft(
+        id: 'draft_B',
+        reporterId: 'user-001',
+        headline: 'Reporter B Active Draft',
+        category: 'Economy',
+        location: 'Chattogram',
+        incidentDetails: 'Draft B media',
+        mediaAttachments: [photoB, videoB],
+        lastSavedAt: DateTime.now(),
+      );
 
-        await draftRepo.saveDraft(draftA);
-        await draftRepo.saveDraft(draftB);
+      await draftRepo.saveDraft(draftA);
+      await draftRepo.saveDraft(draftB);
 
-        // Select Draft B as currently active form draft, then sync Draft A in background
-        container.read(activeDraftProvider.notifier).selectDraft(draftB);
-        final syncedA =
-            await container.read(draftSyncServiceProvider).syncDraft(draftA);
+      // Select Draft B as currently active form draft, then sync Draft A in background
+      container.read(activeDraftProvider.notifier).selectDraft(draftB);
+      final syncedA = await container
+          .read(draftSyncServiceProvider)
+          .syncDraft(draftA);
 
-        // Active draft MUST still be Draft B with Draft B's media!
-        final activeNow = container.read(activeDraftProvider);
-        expect(activeNow?.id, equals('draft_B'));
-        expect(activeNow?.mediaAttachments.map((m) => m.id), containsAll(['photo_draft_B', 'video_draft_B']));
-        expect(activeNow?.voiceDispatch, isNull);
+      // Active draft MUST still be Draft B with Draft B's media!
+      final activeNow = container.read(activeDraftProvider);
+      expect(activeNow?.id, equals('draft_B'));
+      expect(
+        activeNow?.mediaAttachments.map((m) => m.id),
+        containsAll(['photo_draft_B', 'video_draft_B']),
+      );
+      expect(activeNow?.voiceDispatch, isNull);
 
-        // Verify Account A owns syncedA's media
-        expect(
-          driveRepo.filesForAccount('reporterA@news.bd').length,
-          equals(3), // photoA + voiceA + draftA.json
-        );
+      // Verify Account A owns syncedA's media
+      expect(
+        driveRepo.filesForAccount('reporterA@news.bd').length,
+        equals(3), // photoA + voiceA + draftA.json
+      );
 
-        // Disconnect Account A and connect Account B
-        await container.read(googleDriveStateProvider.notifier).disconnectAccount();
-        await container
-            .read(googleDriveStateProvider.notifier)
-            .connectAccount(preferredEmail: 'reporterB@news.bd');
+      // Disconnect Account A and connect Account B
+      await container
+          .read(googleDriveStateProvider.notifier)
+          .disconnectAccount();
+      await container
+          .read(googleDriveStateProvider.notifier)
+          .connectAccount(preferredEmail: 'reporterB@news.bd');
 
-        // Wait for connectAccount microtask batch sync on pending Draft B
-        await Future<void>.delayed(const Duration(milliseconds: 50));
+      // Wait for connectAccount microtask batch sync on pending Draft B
+      await Future<void>.delayed(const Duration(milliseconds: 50));
 
-        // Account A's files MUST NOT appear in Account B's listFiles
-        final accountBFiles = await driveRepo.listFiles(
-          reporterGoogleEmail: 'reporterB@news.bd',
-        );
-        expect(
-          accountBFiles.any((f) => f.driveFileId == syncedA.mediaAttachments.first.driveFileId),
-          isFalse,
-        );
-        // Account B received Draft B's files
-        expect(
-          driveRepo.filesForAccount('reporterB@news.bd').length,
-          equals(3), // photoB + videoB + draft_B.json
-        );
+      // Account A's files MUST NOT appear in Account B's listFiles
+      final accountBFiles = await driveRepo.listFiles(
+        reporterGoogleEmail: 'reporterB@news.bd',
+      );
+      expect(
+        accountBFiles.any(
+          (f) => f.driveFileId == syncedA.mediaAttachments.first.driveFileId,
+        ),
+        isFalse,
+      );
+      // Account B received Draft B's files
+      expect(
+        driveRepo.filesForAccount('reporterB@news.bd').length,
+        equals(3), // photoB + videoB + draft_B.json
+      );
 
-        // If syncedA is explicitly re-synced under Account B, it re-uploads to Account B's Drive instead of skipping
-        final syncedAUnderB =
-            await container.read(draftSyncServiceProvider).syncDraft(syncedA);
-        expect(syncedAUnderB.driveFolderId, isNot(equals(syncedA.driveFolderId)));
-        expect(
-          syncedAUnderB.mediaAttachments.first.reporterGoogleAccountEmail,
-          equals('reporterB@news.bd'),
-        );
-      },
-    );
+      // If syncedA is explicitly re-synced under Account B, it re-uploads to Account B's Drive instead of skipping
+      final syncedAUnderB = await container
+          .read(draftSyncServiceProvider)
+          .syncDraft(syncedA);
+      expect(syncedAUnderB.driveFolderId, isNot(equals(syncedA.driveFolderId)));
+      expect(
+        syncedAUnderB.mediaAttachments.first.reporterGoogleAccountEmail,
+        equals('reporterB@news.bd'),
+      );
+    });
 
     test(
       '6. Missing Files, Upload Failures, App Termination Recovery & Editorial Safeguard',
@@ -670,7 +680,9 @@ void main() {
         );
 
         // App termination mid-sync recovery: draft saved in SQLite stuck in `syncing`
-        final (photo, video, voice) = await createAllThreeMedia('draft_crashed');
+        final (photo, video, voice) = await createAllThreeMedia(
+          'draft_crashed',
+        );
         final stuckSyncDraft = NewsDraft(
           id: 'draft_crashed',
           reporterId: 'user-001',

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:journalist_app_1/core/constants/app_colors.dart';
+import 'package:journalist_app_1/models/news_status.dart';
 import 'package:journalist_app_1/providers/app_providers.dart';
 import 'package:journalist_app_1/screens/drafts_screen.dart';
+import 'package:journalist_app_1/screens/my_news_screen.dart';
 
 /// Model representing a sample news item for the Dashboard
 class NewsSubmissionItem {
@@ -59,6 +61,11 @@ class DashboardScreen extends ConsumerWidget {
 
     final draftCount = ref.watch(draftCountProvider);
     final draftCountText = '$draftCount';
+    final statusCounts = ref.watch(newsStatusCountsProvider).asData?.value;
+    final pendingCountText = '${statusCounts?[NewsStatus.pending] ?? 1}';
+    final publishedCountText = '${statusCounts?[NewsStatus.published] ?? 1}';
+    final authState = ref.watch(authStateProvider);
+    final authUser = authState.user;
 
     return Scaffold(
       backgroundColor: neutralLight,
@@ -100,29 +107,42 @@ class DashboardScreen extends ConsumerWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Welcome, Reporter',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: navyDark,
-                          letterSpacing: -0.5,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          authUser != null
+                              ? 'Welcome, ${authUser.name}'
+                              : 'Welcome, Reporter',
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: navyDark,
+                            letterSpacing: -0.5,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Newsroom Field Reporting Portal',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey.shade600,
-                          fontWeight: FontWeight.w500,
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Text(
+                              authUser != null
+                                  ? '${authUser.role.displayLabel} • ${authUser.userCode}'
+                                  : 'Newsroom Field Reporting Portal',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey.shade600,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 12),
                   CircleAvatar(
                     radius: 22,
                     backgroundColor: navyPrimary.withValues(alpha: 0.1),
@@ -134,7 +154,87 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
+
+              if (authUser == null) ...[
+                Container(
+                  margin: const EdgeInsets.only(bottom: 18),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: navyPrimary.withValues(alpha: 0.18),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(9),
+                        decoration: BoxDecoration(
+                          color: navyPrimary.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.login_rounded,
+                          color: navyPrimary,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Newsroom API Sign In',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: navyDark,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Sign in with your Reporter, Editor, or Admin account.',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        key: const Key('dashboard_login_button'),
+                        onPressed: () {
+                          Navigator.of(context).pushNamed('/login');
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: navyPrimary,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text(
+                          'Sign In',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
 
               // --- Prominent "Submit News" Card ---
               Container(
@@ -278,18 +378,34 @@ class DashboardScreen extends ConsumerWidget {
                   Expanded(
                     child: _buildStatusCard(
                       label: 'Pending',
-                      count: '4',
+                      count: pendingCountText,
                       icon: Icons.hourglass_top_rounded,
                       accentColor: const Color(0xFFD97706),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                const MyNewsScreen(initialFilter: 'Pending'),
+                          ),
+                        );
+                      },
                     ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: _buildStatusCard(
                       label: 'Published',
-                      count: '12',
+                      count: publishedCountText,
                       icon: Icons.check_circle_outline_rounded,
                       accentColor: const Color(0xFF16A34A),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                const MyNewsScreen(initialFilter: 'Published'),
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ],

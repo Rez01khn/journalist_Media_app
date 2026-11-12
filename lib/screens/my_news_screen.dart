@@ -22,15 +22,22 @@ class MyNewsItem {
 /// The MyNewsScreen displays a list of field news stories submitted by the journalist,
 /// including category, timestamp, and status badges (Pending, Approved, Published, Rejected).
 class MyNewsScreen extends StatefulWidget {
-  const MyNewsScreen({super.key});
+  final String initialFilter;
+
+  const MyNewsScreen({super.key, this.initialFilter = 'All'});
 
   @override
   State<MyNewsScreen> createState() => _MyNewsScreenState();
 }
 
 class _MyNewsScreenState extends State<MyNewsScreen> {
-  // Filter options for news items
-  String _activeFilter = 'All';
+  late String _activeFilter;
+
+  @override
+  void initState() {
+    super.initState();
+    _activeFilter = widget.initialFilter;
+  }
 
   // Local sample mock data representing submissions with all 4 required statuses
   static const List<MyNewsItem> _mockSubmissions = [

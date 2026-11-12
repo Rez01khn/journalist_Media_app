@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:journalist_app_1/models/news_media.dart';
+import 'package:journalist_app_1/providers/auth_provider.dart';
 import 'package:journalist_app_1/providers/google_drive_provider.dart';
 
 /// The ProfileScreen displays a journalist's official editorial credentials,
@@ -44,6 +45,72 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
+  Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Logout of Newsroom Account?'),
+        content: const Text(
+          'Your current device session token will be revoked on the server. '
+          'Your offline drafts and Google Drive connection will remain untouched.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            key: const Key('confirm_logout_button'),
+            onPressed: () => Navigator.of(dialogCtx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !context.mounted) return;
+
+    final result = await ref.read(authStateProvider.notifier).logout();
+    if (!context.mounted || result.ignoredDuplicate) return;
+
+    if (result.success) {
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
+
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              result.success
+                  ? Icons.check_circle_outline_rounded
+                  : Icons.error_outline_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(result.message, style: const TextStyle(fontSize: 13)),
+            ),
+          ],
+        ),
+        backgroundColor: result.success
+            ? (result.alreadyExpired
+                ? const Color(0xFF475569)
+                : const Color(0xFF16A34A))
+            : const Color(0xFFDC2626),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     const navyPrimary = Color(0xFF0D253F);
@@ -51,6 +118,22 @@ class ProfileScreen extends ConsumerWidget {
     const neutralLight = Color(0xFFF7F9FC);
 
     final driveState = ref.watch(googleDriveStateProvider);
+    final authState = ref.watch(authStateProvider);
+    final authUser = authState.user;
+
+    final displayName = authUser?.name ?? fullName;
+    final displayReporterId = authUser != null && authUser.userCode.isNotEmpty
+        ? authUser.userCode
+        : reporterId;
+    final displayDesignation = authUser?.designation ?? designation;
+    final displayEmail = authUser?.email ?? email;
+    final displayArea = authUser?.assignedArea ?? assignedArea;
+    final displayStatus = authUser != null
+        ? '${authUser.status == 'active' ? 'Active & Verified' : authUser.status} (${authUser.role.displayLabel})'
+        : 'Offline / Not Signed In';
+    final displayStatusColor = authUser != null
+        ? const Color(0xFF16A34A)
+        : const Color(0xFFD97706);
 
     return Scaffold(
       backgroundColor: neutralLight,
@@ -74,218 +157,313 @@ class ProfileScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // --- Profile Header Card ---
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey.shade200),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.03),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    // Avatar Placeholder
-                    Stack(
-                      alignment: Alignment.bottomRight,
-                      children: [
-                        CircleAvatar(
-                          radius: 42,
-                          backgroundColor: navyPrimary.withValues(alpha: 0.1),
-                          child: const Icon(
-                            Icons.person_rounded,
-                            size: 50,
-                            color: navyPrimary,
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF16A34A),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.check,
-                            size: 14,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Full Name
-                    const Text(
-                      fullName,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: navyDark,
-                        letterSpacing: -0.3,
+              if (authUser == null) ...[
+                // --- Logged-out Card: Sign In or Sign Up ---
+                Container(
+                  padding: const EdgeInsets.all(22),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey.shade200),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.03),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-
-                    // Designation & Bureau
-                    Text(
-                      designation,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-
-                    // Official Press ID Badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: navyPrimary.withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: navyPrimary.withValues(alpha: 0.2),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      CircleAvatar(
+                        radius: 38,
+                        backgroundColor: navyPrimary.withValues(alpha: 0.08),
+                        child: const Icon(
+                          Icons.person_outline_rounded,
+                          size: 42,
+                          color: navyPrimary,
                         ),
                       ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
+                      const SizedBox(height: 14),
+                      const Text(
+                        'Sign In or Sign Up',
+                        style: TextStyle(
+                          fontSize: 19,
+                          fontWeight: FontWeight.bold,
+                          color: navyDark,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Authenticate with your Reporter, Editor, Senior Editor, or Admin account.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey.shade600,
+                          height: 1.4,
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      Row(
                         children: [
-                          Icon(
-                            Icons.verified_rounded,
-                            size: 14,
-                            color: navyPrimary,
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              key: const Key('profile_login_button'),
+                              onPressed: () {
+                                Navigator.of(context).pushNamed('/login');
+                              },
+                              icon: const Icon(Icons.login_rounded, size: 18),
+                              label: const Text(
+                                'Sign In',
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: navyPrimary,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                            ),
                           ),
-                          SizedBox(width: 5),
-                          Text(
-                            'PRESS ID: $reporterId',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: navyPrimary,
-                              letterSpacing: 0.5,
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              key: const Key('profile_signup_button'),
+                              onPressed: () {
+                                _showNotice(context, 'Sign Up');
+                              },
+                              icon: const Icon(Icons.person_add_outlined, size: 18),
+                              label: const Text(
+                                'Sign Up',
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: navyPrimary,
+                                side: BorderSide(
+                                  color: navyPrimary.withValues(alpha: 0.35),
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // --- Section: Editorial Credentials ---
-              const Padding(
-                padding: EdgeInsets.only(left: 4, bottom: 8),
-                child: Text(
-                  'Editorial Credentials',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: navyDark,
+                    ],
                   ),
                 ),
-              ),
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey.shade200),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.02),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    _buildInfoTile(
-                      icon: Icons.badge_outlined,
-                      label: 'Reporter ID',
-                      value: reporterId,
-                      navyPrimary: navyPrimary,
-                      isMonospace: true,
-                    ),
-                    _buildDivider(),
-                    _buildInfoTile(
-                      icon: Icons.work_outline_rounded,
-                      label: 'Designation',
-                      value: designation,
-                      navyPrimary: navyPrimary,
-                    ),
-                    _buildDivider(),
-                    _buildInfoTile(
-                      icon: Icons.map_outlined,
-                      label: 'Assigned Area',
-                      value: assignedArea,
-                      navyPrimary: navyPrimary,
-                    ),
-                    _buildDivider(),
-                    _buildInfoTile(
-                      icon: Icons.check_circle_outline_rounded,
-                      label: 'Account Status',
-                      value: accountStatus,
-                      navyPrimary: navyPrimary,
-                      valueColor: const Color(0xFF16A34A),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // --- Section: Contact Information ---
-              const Padding(
-                padding: EdgeInsets.only(left: 4, bottom: 8),
-                child: Text(
-                  'Contact Information',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: navyDark,
+                const SizedBox(height: 20),
+              ] else ...[
+                // --- Profile Header Card (Authenticated User) ---
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey.shade200),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.03),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Stack(
+                        alignment: Alignment.bottomRight,
+                        children: [
+                          CircleAvatar(
+                            radius: 42,
+                            backgroundColor: navyPrimary.withValues(alpha: 0.1),
+                            child: const Icon(
+                              Icons.person_rounded,
+                              size: 50,
+                              color: navyPrimary,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF16A34A),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.check,
+                              size: 14,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        displayName,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: navyDark,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        displayDesignation,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: navyPrimary.withValues(alpha: 0.06),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: navyPrimary.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.verified_rounded,
+                              size: 14,
+                              color: navyPrimary,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              '${authUser.role.displayLabel.toUpperCase()} • $displayReporterId',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: navyPrimary,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey.shade200),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.02),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    _buildInfoTile(
-                      icon: Icons.email_outlined,
-                      label: 'Official Email',
-                      value: email,
-                      navyPrimary: navyPrimary,
-                    ),
-                    _buildDivider(),
-                    _buildInfoTile(
-                      icon: Icons.phone_outlined,
-                      label: 'Phone Number',
-                      value: phone,
-                      navyPrimary: navyPrimary,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
+                const SizedBox(height: 20),
 
-              // --- Section: Google Drive Storage ---
+                // --- Section: Editorial Credentials ---
+                const Padding(
+                  padding: EdgeInsets.only(left: 4, bottom: 8),
+                  child: Text(
+                    'Editorial Credentials',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: navyDark,
+                    ),
+                  ),
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey.shade200),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.02),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      _buildInfoTile(
+                        icon: Icons.badge_outlined,
+                        label: 'Reporter ID',
+                        value: displayReporterId,
+                        navyPrimary: navyPrimary,
+                        isMonospace: true,
+                      ),
+                      _buildDivider(),
+                      _buildInfoTile(
+                        icon: Icons.work_outline_rounded,
+                        label: 'Designation',
+                        value: displayDesignation,
+                        navyPrimary: navyPrimary,
+                      ),
+                      _buildDivider(),
+                      _buildInfoTile(
+                        icon: Icons.map_outlined,
+                        label: 'Assigned Area',
+                        value: displayArea,
+                        navyPrimary: navyPrimary,
+                      ),
+                      _buildDivider(),
+                      _buildInfoTile(
+                        icon: Icons.check_circle_outline_rounded,
+                        label: 'Account Status',
+                        value: displayStatus,
+                        navyPrimary: navyPrimary,
+                        valueColor: displayStatusColor,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // --- Section: Contact Information ---
+                const Padding(
+                  padding: EdgeInsets.only(left: 4, bottom: 8),
+                  child: Text(
+                    'Contact Information',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: navyDark,
+                    ),
+                  ),
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey.shade200),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.02),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      _buildInfoTile(
+                        icon: Icons.email_outlined,
+                        label: 'Official Email',
+                        value: displayEmail,
+                        navyPrimary: navyPrimary,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+              // --- Section: Google Drive Storage (Only shown when signed in) ---
               Padding(
                 padding: const EdgeInsets.only(left: 4, bottom: 8),
                 child: Row(
@@ -571,7 +749,7 @@ class ProfileScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 20),
 
-              // --- Section: Account Actions (Prototypes) ---
+              // --- Section: Account Actions ---
               Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -605,29 +783,47 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                     _buildDivider(),
                     ListTile(
+                      key: const Key('profile_logout_tile'),
+                      enabled: !authState.isLoggingOut,
                       leading: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           color: const Color(0xFFDC2626).withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Icon(Icons.logout_rounded, color: Color(0xFFDC2626), size: 20),
+                        child: authState.isLoggingOut
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Color(0xFFDC2626),
+                                ),
+                              )
+                            : const Icon(
+                                Icons.logout_rounded,
+                                color: Color(0xFFDC2626),
+                                size: 20,
+                              ),
                       ),
-                      title: const Text(
-                        'Logout',
-                        style: TextStyle(
+                      title: Text(
+                        authState.isLoggingOut ? 'Logging out...' : 'Logout',
+                        style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                           color: Color(0xFFDC2626),
                         ),
                       ),
                       trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
-                      onTap: () => _showNotice(context, 'Logout'),
+                      onTap: authState.isLoggingOut
+                          ? null
+                          : () => _handleLogout(context, ref),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 24),
+              ],
 
               // Editorial Footer Notice
               Text(
