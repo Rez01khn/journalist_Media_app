@@ -2453,20 +2453,19 @@ class _SubmitNewsScreenState extends ConsumerState<SubmitNewsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'Field Reporting Desk',
+                              'Quick Field Capture',
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
                                 color: navyDark,
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 3),
                             Text(
-                              'Submit verified facts and breaking news directly from the field. Stories are auto-saved offline in SQLite. You can attach photos, voice notes, or use AI assist.',
+                              '1. Add Photo/Video  •  2. Voice or Text  •  3. Preview & Submit',
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: 11.5,
                                 color: Colors.grey.shade600,
-                                height: 1.4,
                               ),
                             ),
                           ],
@@ -2475,368 +2474,51 @@ class _SubmitNewsScreenState extends ConsumerState<SubmitNewsScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
 
-                // --- Form Fields Card ---
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.grey.shade200),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.03),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // --- Headline Input ---
-                      const Text(
-                        'News Headline *',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: navyDark,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _headlineController,
-                        textInputAction: TextInputAction.next,
-                        validator: NewsValidationService.validateHeadline,
-                        decoration: InputDecoration(
-                          hintText: 'Enter an eye-catching, verified headline',
-                          hintStyle: TextStyle(
-                            color: Colors.grey.shade400,
-                            fontSize: 13,
-                          ),
-                          prefixIcon: const Icon(
-                            Icons.title_rounded,
-                            color: navyPrimary,
-                            size: 20,
-                          ),
-                          filled: true,
-                          fillColor: neutralLight,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 12,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide.none,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(color: Colors.grey.shade200),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: const BorderSide(
-                              color: navyPrimary,
-                              width: 1.5,
-                            ),
-                          ),
-                          errorBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(
-                              color: Colors.red.shade600,
-                              width: 1.5,
-                            ),
-                          ),
-                          focusedErrorBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(
-                              color: Colors.red.shade700,
-                              width: 1.5,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-
-                      // --- Category Dropdown ---
-                      const Text(
-                        'Category *',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: navyDark,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      DropdownButtonFormField<String>(
-                        value: _selectedCategory,
-                        hint: Text(
-                          'Select news category',
-                          style: TextStyle(
-                            color: Colors.grey.shade400,
-                            fontSize: 13,
-                          ),
-                        ),
-                        items: _categories.map((String category) {
-                          return DropdownMenuItem<String>(
-                            value: category,
-                            child: Text(
-                              category,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: navyDark,
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (String? newValue) {
-                          setState(() {
-                            _selectedCategory = newValue;
-                          });
-                          _onFieldChanged();
-                        },
-                        decoration: InputDecoration(
-                          prefixIcon: const Icon(
-                            Icons.category_outlined,
-                            color: navyPrimary,
-                            size: 20,
-                          ),
-                          filled: true,
-                          fillColor: neutralLight,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 12,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide.none,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(color: Colors.grey.shade200),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: const BorderSide(
-                              color: navyPrimary,
-                              width: 1.5,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-
-                      // --- Incident Location Input ---
-                      const Text(
-                        'Incident Location *',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: navyDark,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _locationController,
-                        textInputAction: TextInputAction.next,
-                        decoration: InputDecoration(
-                          hintText: 'e.g. Motijheel, Dhaka or Chattogram Port',
-                          hintStyle: TextStyle(
-                            color: Colors.grey.shade400,
-                            fontSize: 13,
-                          ),
-                          prefixIcon: const Icon(
-                            Icons.location_on_outlined,
-                            color: navyPrimary,
-                            size: 20,
-                          ),
-                          filled: true,
-                          fillColor: neutralLight,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 12,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide.none,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(color: Colors.grey.shade200),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: const BorderSide(
-                              color: navyPrimary,
-                              width: 1.5,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-
-                      // --- Description & AI Assist Header ---
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Expanded(
-                            child: Text(
-                              'Incident Details / Description *',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: navyDark,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          // AI Assist Prototype Button
-                          InkWell(
-                            onTap: () => _showPrototypeNotice('AI Assist'),
-                            borderRadius: BorderRadius.circular(6),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: navyPrimary.withValues(alpha: 0.08),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                  color: navyPrimary.withValues(alpha: 0.2),
-                                ),
-                              ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.auto_awesome,
-                                    size: 14,
-                                    color: navyPrimary,
-                                  ),
-                                  SizedBox(width: 4),
-                                  Text(
-                                    'AI Assist',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      color: navyPrimary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Multiline Description Text Field
-                      TextFormField(
-                        controller: _descriptionController,
-                        maxLines: 5,
-                        textInputAction: TextInputAction.newline,
-                        validator: NewsValidationService.validateBody,
-                        decoration: InputDecoration(
-                          hintText:
-                              'Write comprehensive facts: who, what, when, where, and how...',
-                          hintStyle: TextStyle(
-                            color: Colors.grey.shade400,
-                            fontSize: 13,
-                          ),
-                          filled: true,
-                          fillColor: neutralLight,
-                          contentPadding: const EdgeInsets.all(14),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide.none,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(color: Colors.grey.shade200),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: const BorderSide(
-                              color: navyPrimary,
-                              width: 1.5,
-                            ),
-                          ),
-                          errorBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(
-                              color: Colors.red.shade600,
-                              width: 1.5,
-                            ),
-                          ),
-                          focusedErrorBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(
-                              color: Colors.red.shade700,
-                              width: 1.5,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 18),
-
-                // --- Media Attachments (Photos, Videos & Voice) ---
+                // --- STEP 1: Unified Media (Photo & Video) ---
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Photo Attachments',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: navyDark,
+                    const Expanded(
+                      child: Text(
+                        '1. Media (Photo / Video)',
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: navyDark,
+                        ),
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: _attachedPhotos.isEmpty
-                            ? Colors.grey.shade100
-                            : navyPrimary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        '${_attachedPhotos.length}/5 Photos',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: _attachedPhotos.isEmpty
-                              ? Colors.grey.shade600
-                              : navyPrimary,
-                        ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${_attachedPhotos.length}/5 Photos • ${_attachedVideos.length}/1 Video',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: (_attachedPhotos.isEmpty && _attachedVideos.isEmpty)
+                            ? Colors.grey.shade600
+                            : navyPrimary,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
-
-                // Photo Attachment Area
+                const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: _attachedPhotos.any((m) =>
-                              _validationResult?.mediaErrors.containsKey(m.id) ??
-                              false)
+                      color: (_attachedPhotos.any((m) =>
+                                  _validationResult?.mediaErrors.containsKey(m.id) ??
+                                  false) ||
+                              _attachedVideos.any((m) =>
+                                  _validationResult?.mediaErrors.containsKey(m.id) ??
+                                  false))
                           ? Colors.red.shade600
                           : Colors.grey.shade200,
-                      width: _attachedPhotos.any((m) =>
-                              _validationResult?.mediaErrors.containsKey(m.id) ??
-                              false)
-                          ? 1.5
-                          : 1.0,
                     ),
                     boxShadow: [
                       BoxShadow(
@@ -2851,7 +2533,7 @@ class _SubmitNewsScreenState extends ConsumerState<SubmitNewsScreen> {
                     children: [
                       if (_attachedPhotos.isNotEmpty) ...[
                         SizedBox(
-                          height: 96,
+                          height: 92,
                           child: ListView.separated(
                             scrollDirection: Axis.horizontal,
                             itemCount: _attachedPhotos.length +
@@ -2862,216 +2544,78 @@ class _SubmitNewsScreenState extends ConsumerState<SubmitNewsScreen> {
                               if (index == _attachedPhotos.length) {
                                 return _buildAddPhotoButton(compact: true);
                               }
-                              final media = _attachedPhotos[index];
-                              return _buildPhotoThumbnail(media);
+                              return _buildPhotoThumbnail(_attachedPhotos[index]);
                             },
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        const Divider(height: 1),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 10),
                       ],
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: navyPrimary.withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(
-                              Icons.add_photo_alternate_outlined,
-                              color: navyPrimary,
-                              size: 24,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Add Field Images',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: navyDark,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'Camera & Gallery (Max 5 photos)',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.grey.shade500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          _buildAddPhotoButton(compact: false),
-                        ],
-                      ),
-                      if (_isAttachingMedia) ...[
-                        const SizedBox(height: 8),
-                        const LinearProgressIndicator(
-                          minHeight: 2,
-                          color: navyPrimary,
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // --- Video Attachments Section ---
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Video Attachment',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: navyDark,
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: _attachedVideos.isEmpty
-                            ? Colors.grey.shade100
-                            : navyPrimary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        _attachedVideos.isEmpty
-                            ? '0/1 Video'
-                            : '${_attachedVideos.length}/1 Video',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: _attachedVideos.isEmpty
-                              ? Colors.grey.shade600
-                              : navyPrimary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: _attachedVideos.any((m) =>
-                              _validationResult?.mediaErrors.containsKey(m.id) ??
-                              false)
-                          ? Colors.red.shade600
-                          : Colors.grey.shade200,
-                      width: _attachedVideos.any((m) =>
-                              _validationResult?.mediaErrors.containsKey(m.id) ??
-                              false)
-                          ? 1.5
-                          : 1.0,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.02),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
                       if (_attachedVideos.isNotEmpty) ...[
                         for (final video in _attachedVideos)
                           _buildVideoAttachmentCard(video, syncStatus),
-                        const Divider(height: 1),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 10),
                       ],
                       Row(
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: navyPrimary.withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(
-                              Icons.videocam_outlined,
-                              color: navyPrimary,
-                              size: 24,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
                           Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  _attachedVideos.isEmpty
-                                      ? 'Add Field Video'
-                                      : 'Replace Field Video',
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: navyDark,
-                                  ),
+                            child: OutlinedButton.icon(
+                              onPressed: _attachedPhotos.length < 5
+                                  ? _showPhotoPickerModal
+                                  : null,
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: navyPrimary,
+                                side: const BorderSide(color: navyPrimary),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'Camera & Gallery (MP4/MOV, Max 100 MB)',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.grey.shade500,
-                                  ),
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                              ),
+                              icon: const Icon(Icons.add_a_photo_outlined, size: 17),
+                              label: const Text(
+                                'Add Photo',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                              ],
+                              ),
                             ),
                           ),
-                          OutlinedButton.icon(
-                            onPressed: () => _showVideoPickerModal(
-                              replacingVideo: _attachedVideos.isNotEmpty
-                                  ? _attachedVideos.first
-                                  : null,
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: navyPrimary,
-                              side: const BorderSide(color: navyPrimary),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () => _showVideoPickerModal(
+                                replacingVideo: _attachedVideos.isNotEmpty
+                                    ? _attachedVideos.first
+                                    : null,
                               ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 8,
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: navyPrimary,
+                                side: const BorderSide(color: navyPrimary),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 10),
                               ),
-                            ),
-                            icon: Icon(
-                              _attachedVideos.isEmpty
-                                  ? Icons.videocam_outlined
-                                  : Icons.swap_horiz_rounded,
-                              size: 16,
-                            ),
-                            label: Text(
-                              _attachedVideos.isEmpty
-                                  ? 'Add Video'
-                                  : 'Replace Video',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
+                              icon: Icon(
+                                _attachedVideos.isEmpty
+                                    ? Icons.videocam_outlined
+                                    : Icons.swap_horiz_rounded,
+                                size: 17,
+                              ),
+                              label: Text(
+                                _attachedVideos.isEmpty
+                                    ? 'Add Video'
+                                    : 'Replace Video',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ),
                         ],
                       ),
-                      if (_isAttachingVideo) ...[
+                      if (_isAttachingMedia || _isAttachingVideo) ...[
                         const SizedBox(height: 8),
                         const LinearProgressIndicator(
                           minHeight: 2,
@@ -3081,20 +2625,24 @@ class _SubmitNewsScreenState extends ConsumerState<SubmitNewsScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
 
-                // --- Voice Dispatch Section (TASK 04.3) ---
+                // --- STEP 2: Voice Story ---
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Voice Dispatch',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: navyDark,
+                    const Expanded(
+                      child: Text(
+                        'Voice Dispatch',
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: navyDark,
+                        ),
                       ),
                     ),
+                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 3),
@@ -3133,9 +2681,7 @@ class _SubmitNewsScreenState extends ConsumerState<SubmitNewsScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
-
-                // Voice Recording & Playback Card
+                const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
@@ -3148,12 +2694,6 @@ class _SubmitNewsScreenState extends ConsumerState<SubmitNewsScreen> {
                                   false))
                           ? Colors.red.shade600
                           : Colors.grey.shade200,
-                      width: (_voiceDispatch != null &&
-                              (_validationResult?.mediaErrors
-                                      .containsKey(_voiceDispatch!.id) ??
-                                  false))
-                          ? 1.5
-                          : 1.0,
                     ),
                     boxShadow: [
                       BoxShadow(
@@ -3174,12 +2714,12 @@ class _SubmitNewsScreenState extends ConsumerState<SubmitNewsScreen> {
                         _buildAttachedVoiceDispatchCard(
                             _voiceDispatch!, syncStatus),
                         const Divider(height: 1),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 10),
                       ],
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(10),
+                            padding: const EdgeInsets.all(9),
                             decoration: BoxDecoration(
                               color: const Color(0xFFD97706)
                                   .withValues(alpha: 0.1),
@@ -3188,7 +2728,7 @@ class _SubmitNewsScreenState extends ConsumerState<SubmitNewsScreen> {
                             child: const Icon(
                               Icons.mic_none_rounded,
                               color: Color(0xFFD97706),
-                              size: 24,
+                              size: 22,
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -3198,17 +2738,16 @@ class _SubmitNewsScreenState extends ConsumerState<SubmitNewsScreen> {
                               children: [
                                 Text(
                                   _voiceDispatch == null
-                                      ? 'Record Field Voice Dispatch'
-                                      : 'Re-record Voice Dispatch',
+                                      ? 'Tell the story by voice'
+                                      : 'Re-record Voice Story',
                                   style: const TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.bold,
                                     color: navyDark,
                                   ),
                                 ),
-                                const SizedBox(height: 2),
                                 Text(
-                                  'M4A / WAV • Max 25 MB (up to 15 min)',
+                                  'Speak the incident details (M4A/WAV)',
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: Colors.grey.shade500,
@@ -3255,6 +2794,269 @@ class _SubmitNewsScreenState extends ConsumerState<SubmitNewsScreen> {
                           color: Color(0xFFD97706),
                         ),
                       ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // --- STEP 3: Story Details (Compact) ---
+                const Text(
+                  '3. Story Details',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: navyDark,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey.shade200),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.03),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextFormField(
+                        controller: _headlineController,
+                        textInputAction: TextInputAction.next,
+                        validator: NewsValidationService.validateHeadline,
+                        decoration: InputDecoration(
+                          labelText: 'Headline *',
+                          hintText: 'Short news headline',
+                          hintStyle: TextStyle(
+                            color: Colors.grey.shade400,
+                            fontSize: 13,
+                          ),
+                          prefixIcon: const Icon(
+                            Icons.title_rounded,
+                            color: navyPrimary,
+                            size: 20,
+                          ),
+                          filled: true,
+                          fillColor: neutralLight,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(color: Colors.grey.shade200),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: const BorderSide(
+                              color: navyPrimary,
+                              width: 1.5,
+                            ),
+                          ),
+                          errorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(
+                              color: Colors.red.shade600,
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              value: _selectedCategory,
+                              isExpanded: true,
+                              hint: Text(
+                                'Category *',
+                                style: TextStyle(
+                                  color: Colors.grey.shade400,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              items: _categories.map((String category) {
+                                return DropdownMenuItem<String>(
+                                  value: category,
+                                  child: Text(
+                                    category,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: navyDark,
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (String? newValue) {
+                                setState(() {
+                                  _selectedCategory = newValue;
+                                });
+                                _onFieldChanged();
+                              },
+                              decoration: InputDecoration(
+                                labelText: 'Category',
+                                filled: true,
+                                fillColor: neutralLight,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 12,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide.none,
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide:
+                                      BorderSide(color: Colors.grey.shade200),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: TextFormField(
+                              controller: _locationController,
+                              textInputAction: TextInputAction.next,
+                              decoration: InputDecoration(
+                                labelText: 'Location *',
+                                hintText: 'e.g. Dhaka',
+                                hintStyle: TextStyle(
+                                  color: Colors.grey.shade400,
+                                  fontSize: 13,
+                                ),
+                                filled: true,
+                                fillColor: neutralLight,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 12,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide.none,
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide:
+                                      BorderSide(color: Colors.grey.shade200),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: const BorderSide(
+                                    color: navyPrimary,
+                                    width: 1.5,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Story / Notes *',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: navyDark,
+                            ),
+                          ),
+                          InkWell(
+                            onTap: () => _showPrototypeNotice('AI Assist'),
+                            borderRadius: BorderRadius.circular(6),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: navyPrimary.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: navyPrimary.withValues(alpha: 0.2),
+                                ),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.auto_awesome,
+                                    size: 14,
+                                    color: navyPrimary,
+                                  ),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'AI Assist',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: navyPrimary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _descriptionController,
+                        maxLines: 4,
+                        textInputAction: TextInputAction.newline,
+                        validator: NewsValidationService.validateBody,
+                        decoration: InputDecoration(
+                          hintText:
+                              'Write raw facts or incident details (who, what, where)...',
+                          hintStyle: TextStyle(
+                            color: Colors.grey.shade400,
+                            fontSize: 13,
+                          ),
+                          filled: true,
+                          fillColor: neutralLight,
+                          contentPadding: const EdgeInsets.all(14),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(color: Colors.grey.shade200),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: const BorderSide(
+                              color: navyPrimary,
+                              width: 1.5,
+                            ),
+                          ),
+                          errorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(
+                              color: Colors.red.shade600,
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),

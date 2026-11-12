@@ -65,7 +65,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify Submit News screen is displayed
-    expect(find.text('Field Reporting Desk'), findsOneWidget);
+    expect(find.text('Quick Field Capture'), findsOneWidget);
 
     // Tap 'My News' tab
     await tester.tap(find.byIcon(Icons.article_outlined));
