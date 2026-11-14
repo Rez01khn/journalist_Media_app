@@ -9,6 +9,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:journalist_app_1/models/news.dart';
 import 'package:journalist_app_1/models/news_draft.dart';
 import 'package:journalist_app_1/providers/app_providers.dart';
+import 'package:journalist_app_1/services/news_api_service.dart';
 
 /// Persistence contract for draft IDs held offline for automatic submission.
 abstract class OfflineSubmissionQueueStorage {
@@ -186,17 +187,56 @@ class OfflineSubmissionQueueNotifier extends Notifier<Set<String>> {
       final submittedNews = await ref
           .read(newsSubmissionRepositoryProvider)
           .submitNewsStory(draft);
+
+      // Persist server news ID, UUID, tracking code, and status locally to SQLite
+      await _persistSubmittedNews(draft, submittedNews);
+
       await _removeDraftAfterSubmit(draft.id);
       return SubmissionOutcome(
         submitted: true,
         queuedOffline: false,
         submittedNews: submittedNews,
-        message: 'News submitted successfully for editorial review.',
+        message: 'News submitted successfully (Tracking: ${submittedNews.trackingCode}).',
       );
     } on SocketException {
       return _holdDraftOffline(draft);
     } on TimeoutException {
       return _holdDraftOffline(draft);
+    } on NewsApiException catch (e) {
+      if (e.isRetryable) {
+        return _holdDraftOffline(draft);
+      }
+      // Non-retryable error (e.g. 422 validation, 403 forbidden, 401 unauth):
+      // Safely preserve the draft in SQLite drafts so the journalist doesn't lose work!
+      final savedDraft = draft.copyWith(lastSavedAt: DateTime.now());
+      await ref.read(draftRepositoryProvider).saveDraft(savedDraft);
+      if (!_isDisposed) {
+        ref.invalidate(draftsListProvider);
+        ref.invalidate(draftCountProvider);
+      }
+      return SubmissionOutcome(
+        submitted: false,
+        queuedOffline: false,
+        message: e.message,
+      );
+    } catch (e) {
+      final savedDraft = draft.copyWith(lastSavedAt: DateTime.now());
+      await ref.read(draftRepositoryProvider).saveDraft(savedDraft);
+      return SubmissionOutcome(
+        submitted: false,
+        queuedOffline: false,
+        message: 'Submission failed: $e',
+      );
+    }
+  }
+
+  Future<void> _persistSubmittedNews(NewsDraft draft, News submittedNews) async {
+    try {
+      await ref
+          .read(sqliteSubmittedNewsRepositoryProvider)
+          .saveSubmittedNews(submittedNews, clientDraftUuid: draft.id);
+    } catch (e) {
+      debugPrint('Could not persist submitted news to SQLite: $e');
     }
   }
 
@@ -280,16 +320,34 @@ class OfflineSubmissionQueueNotifier extends Notifier<Set<String>> {
         }
 
         try {
-          await submitRepo.submitNewsStory(draft);
+          final submitted = await submitRepo.submitNewsStory(draft);
+          await _persistSubmittedNews(draft, submitted);
           await _removeDraftAfterSubmit(draftId);
           submittedCount++;
         } on SocketException {
           break;
         } on TimeoutException {
           break;
+        } on NewsApiException catch (e) {
+          if (e.isRetryable) {
+            break; // Stop loop and retry later when network is stable
+          }
+          // Non-retryable error (e.g. 422 validation): unqueue so it doesn't loop
+          // but draft remains saved in SQLite drafts for reporter to fix
+          final updated = Set<String>.from(state)..remove(draftId);
+          state = updated;
+          await _persistState();
+          debugPrint('Draft $draftId rejected by server: ${e.message}');
         } catch (e) {
           debugPrint('Auto-submit failed for draft $draftId: $e');
         }
+      }
+
+      // Also retry any pending media metadata registrations once online
+      try {
+        await submitRepo.retryPendingMediaRegistrations();
+      } catch (e) {
+        debugPrint('Retry pending media registrations error: $e');
       }
     } finally {
       _isProcessing = false;

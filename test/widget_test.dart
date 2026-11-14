@@ -4,7 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:journalist_app_1/main.dart';
 import 'package:journalist_app_1/models/auth_session.dart';
 import 'package:journalist_app_1/models/auth_user.dart';
-import 'package:journalist_app_1/providers/auth_provider.dart';
+import 'package:journalist_app_1/models/news.dart';
+import 'package:journalist_app_1/models/news_status.dart';
+import 'package:journalist_app_1/providers/app_providers.dart';
 
 class _AuthenticatedSmokeAuthNotifier extends AuthNotifier {
   @override
@@ -37,6 +39,23 @@ void main() {
       ProviderScope(
         overrides: [
           authStateProvider.overrideWith(_AuthenticatedSmokeAuthNotifier.new),
+          newsListProvider(null).overrideWith((ref) async => [
+                News(
+                  id: '1',
+                  trackingCode: 'REP-101',
+                  reporterId: '4',
+                  reporterName: 'Rezwan Ahmed',
+                  headline: 'REP-101 Breaking Report',
+                  incidentDetails: 'Detailed report contents here...',
+                  category: 'Politics',
+                  location: 'Dhaka Central',
+                  status: NewsStatus.pending,
+                  submittedAt: DateTime.now(),
+                ),
+              ]),
+          newsStatusCountsProvider.overrideWith((ref) async => {
+                NewsStatus.pending: 1,
+              }),
         ],
         child: const JournalistApp(),
       ),

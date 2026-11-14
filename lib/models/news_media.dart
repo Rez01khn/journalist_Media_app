@@ -39,6 +39,12 @@ class NewsMedia {
   final String? reporterGoogleAccountEmail;
   final DateTime createdAt;
 
+  // Server Media Registration (Laravel backend metadata)
+  final bool isRegisteredOnServer;
+  final String? serverMediaId;
+  final String? serverRegistrationError;
+  final String? serverRegistrationStatus; // 'pending', 'registered', 'failed', 'duplicate'
+
   const NewsMedia({
     required this.id,
     required this.fileName,
@@ -54,6 +60,10 @@ class NewsMedia {
     this.uploadErrorMessage,
     this.reporterGoogleAccountEmail,
     required this.createdAt,
+    this.isRegisteredOnServer = false,
+    this.serverMediaId,
+    this.serverRegistrationError,
+    this.serverRegistrationStatus,
   });
 
   NewsMedia copyWith({
@@ -72,6 +82,11 @@ class NewsMedia {
     bool clearUploadError = false,
     String? reporterGoogleAccountEmail,
     DateTime? createdAt,
+    bool? isRegisteredOnServer,
+    String? serverMediaId,
+    String? serverRegistrationError,
+    bool clearServerError = false,
+    String? serverRegistrationStatus,
   }) {
     return NewsMedia(
       id: id ?? this.id,
@@ -91,6 +106,13 @@ class NewsMedia {
       reporterGoogleAccountEmail:
           reporterGoogleAccountEmail ?? this.reporterGoogleAccountEmail,
       createdAt: createdAt ?? this.createdAt,
+      isRegisteredOnServer: isRegisteredOnServer ?? this.isRegisteredOnServer,
+      serverMediaId: serverMediaId ?? this.serverMediaId,
+      serverRegistrationError: clearServerError
+          ? null
+          : (serverRegistrationError ?? this.serverRegistrationError),
+      serverRegistrationStatus:
+          serverRegistrationStatus ?? this.serverRegistrationStatus,
     );
   }
 
@@ -110,6 +132,10 @@ class NewsMedia {
       'upload_error_message': uploadErrorMessage,
       'reporter_google_account_email': reporterGoogleAccountEmail,
       'created_at': createdAt.toIso8601String(),
+      'is_registered_on_server': isRegisteredOnServer,
+      'server_media_id': serverMediaId,
+      'server_registration_error': serverRegistrationError,
+      'server_registration_status': serverRegistrationStatus,
     };
   }
 
@@ -132,6 +158,10 @@ class NewsMedia {
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : DateTime.now(),
+      isRegisteredOnServer: json['is_registered_on_server'] as bool? ?? false,
+      serverMediaId: json['server_media_id']?.toString(),
+      serverRegistrationError: json['server_registration_error'] as String?,
+      serverRegistrationStatus: json['server_registration_status'] as String?,
     );
   }
 }

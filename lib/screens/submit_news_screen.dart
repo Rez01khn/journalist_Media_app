@@ -14,6 +14,7 @@ import 'package:journalist_app_1/services/media_storage_service.dart';
 import 'package:journalist_app_1/services/news_validation_service.dart';
 import 'package:journalist_app_1/services/voice_recorder_service.dart';
 import 'package:path/path.dart' as p;
+import 'package:uuid/uuid.dart';
 import 'package:video_player/video_player.dart';
 
 /// The SubmitNewsScreen provides a comprehensive form for field journalists
@@ -201,7 +202,7 @@ class _SubmitNewsScreenState extends ConsumerState<SubmitNewsScreen> {
       final reporterId = reporter?.id ?? 'user-001';
 
       final draftId =
-          _currentDraftId ?? 'draft_${DateTime.now().millisecondsSinceEpoch}';
+          _currentDraftId ?? const Uuid().v4();
 
       final active = ref.read(activeDraftProvider);
       final isSameActive = active?.id == draftId;
@@ -553,7 +554,7 @@ class _SubmitNewsScreenState extends ConsumerState<SubmitNewsScreen> {
       setState(() => _isAttachingMedia = true);
 
       final draftId =
-          _currentDraftId ?? 'draft_${DateTime.now().millisecondsSinceEpoch}';
+          _currentDraftId ?? const Uuid().v4();
       _currentDraftId = draftId;
 
       final mediaStorage = ref.read(mediaStorageServiceProvider);
@@ -613,7 +614,7 @@ class _SubmitNewsScreenState extends ConsumerState<SubmitNewsScreen> {
       setState(() => _isAttachingMedia = true);
 
       final draftId =
-          _currentDraftId ?? 'draft_${DateTime.now().millisecondsSinceEpoch}';
+          _currentDraftId ?? const Uuid().v4();
       _currentDraftId = draftId;
 
       final mediaStorage = ref.read(mediaStorageServiceProvider);
@@ -1061,7 +1062,7 @@ class _SubmitNewsScreenState extends ConsumerState<SubmitNewsScreen> {
       setState(() => _isAttachingVideo = true);
 
       final draftId =
-          _currentDraftId ?? 'draft_${DateTime.now().millisecondsSinceEpoch}';
+          _currentDraftId ?? const Uuid().v4();
       _currentDraftId = draftId;
 
       final mediaStorage = ref.read(mediaStorageServiceProvider);
@@ -1469,7 +1470,7 @@ class _SubmitNewsScreenState extends ConsumerState<SubmitNewsScreen> {
 
     try {
       final draftId =
-          _currentDraftId ?? 'draft_${DateTime.now().millisecondsSinceEpoch}';
+          _currentDraftId ?? const Uuid().v4();
       _currentDraftId = draftId;
 
       final mediaStorage = ref.read(mediaStorageServiceProvider);
@@ -1557,7 +1558,7 @@ class _SubmitNewsScreenState extends ConsumerState<SubmitNewsScreen> {
       );
 
       final draftId =
-          _currentDraftId ?? 'draft_${DateTime.now().millisecondsSinceEpoch}';
+          _currentDraftId ?? const Uuid().v4();
       _currentDraftId = draftId;
 
       final mediaStorage = ref.read(mediaStorageServiceProvider);
@@ -2183,7 +2184,7 @@ class _SubmitNewsScreenState extends ConsumerState<SubmitNewsScreen> {
     final reporter = ref.read(currentReporterProvider).asData?.value;
     final reporterId = reporter?.id ?? 'user-001';
     final draftId =
-        _currentDraftId ?? 'draft_${DateTime.now().millisecondsSinceEpoch}';
+        _currentDraftId ?? const Uuid().v4();
     final active = ref.read(activeDraftProvider);
 
     final draftSnapshot = NewsDraft(

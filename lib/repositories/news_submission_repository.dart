@@ -16,6 +16,10 @@ abstract class NewsSubmissionRepository {
   /// Generates an editorial preview of how the submitted story will look.
   Future<News> previewNewsStory(NewsDraft draft);
 
+  /// Retries any pending media metadata registrations that previously failed
+  /// due to recoverable network errors or pending Drive uploads.
+  Future<int> retryPendingMediaRegistrations() async => 0;
+
   /// Future Phase Hook: Exports an approved story and its editorial metadata
   /// to the existing Laravel news website. Original media remains in the reporter's
   /// Google Drive and is never copied to the existing Laravel website database.

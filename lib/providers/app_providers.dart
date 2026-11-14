@@ -3,8 +3,10 @@ import 'package:journalist_app_1/models/news.dart';
 import 'package:journalist_app_1/models/news_draft.dart';
 import 'package:journalist_app_1/models/news_status.dart';
 import 'package:journalist_app_1/models/reporter.dart';
+import 'package:journalist_app_1/repositories/api_news_submission_repository.dart';
 import 'package:journalist_app_1/repositories/auth_repository.dart';
 import 'package:journalist_app_1/repositories/draft_repository.dart';
+import 'package:journalist_app_1/providers/auth_provider.dart';
 export 'package:journalist_app_1/providers/auth_provider.dart';
 export 'package:journalist_app_1/providers/google_drive_provider.dart';
 export 'package:journalist_app_1/providers/draft_sync_provider.dart';
@@ -12,7 +14,10 @@ import 'package:journalist_app_1/repositories/mock/mock_repositories.dart';
 import 'package:journalist_app_1/repositories/news_repository.dart';
 import 'package:journalist_app_1/repositories/news_submission_repository.dart';
 import 'package:journalist_app_1/repositories/sqlite/sqlite_draft_repository.dart';
+import 'package:journalist_app_1/repositories/sqlite/sqlite_pending_media_repository.dart';
+import 'package:journalist_app_1/repositories/sqlite/sqlite_submitted_news_repository.dart';
 import 'package:journalist_app_1/services/media_storage_service.dart';
+import 'package:journalist_app_1/services/news_api_service.dart';
 import 'package:journalist_app_1/services/news_validation_service.dart';
 import 'package:journalist_app_1/services/voice_recorder_service.dart';
 
@@ -34,7 +39,7 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 });
 
 final newsRepositoryProvider = Provider<NewsRepository>((ref) {
-  return MockNewsRepository();
+  return ref.watch(sqliteSubmittedNewsRepositoryProvider);
 });
 
 /// SQLite Database Draft Repository Provider for offline persistence
@@ -42,14 +47,34 @@ final sqliteDraftRepositoryProvider = Provider<SqliteDraftRepository>((ref) {
   return SqliteDraftRepository();
 });
 
+final sqliteSubmittedNewsRepositoryProvider =
+    Provider<SqliteSubmittedNewsRepository>((ref) {
+      return SqliteSubmittedNewsRepository();
+    });
+
+final sqlitePendingMediaRepositoryProvider =
+    Provider<SqlitePendingMediaRepository>((ref) {
+      return SqlitePendingMediaRepository();
+    });
+
 /// Draft repository provider defaulting to SQLite implementation
 final draftRepositoryProvider = Provider<DraftRepository>((ref) {
   return ref.watch(sqliteDraftRepositoryProvider);
 });
 
+final newsApiServiceProvider = Provider<NewsApiService>((ref) {
+  return NewsApiService();
+});
 
-final newsSubmissionRepositoryProvider = Provider<NewsSubmissionRepository>((ref) {
-  return MockNewsSubmissionRepository();
+final newsSubmissionRepositoryProvider = Provider<NewsSubmissionRepository>((
+  ref,
+) {
+  return ApiNewsSubmissionRepository(
+    apiService: ref.watch(newsApiServiceProvider),
+    tokenStorage: ref.watch(secureTokenStorageProvider),
+    pendingMediaRepo: ref.watch(sqlitePendingMediaRepositoryProvider),
+    submittedNewsRepo: ref.watch(sqliteSubmittedNewsRepositoryProvider),
+  );
 });
 
 /// Current Reporter Provider
@@ -69,8 +94,9 @@ class ActiveDraftNotifier extends Notifier<NewsDraft?> {
 }
 
 /// Active Draft Provider (currently being edited on SubmitNewsScreen)
-final activeDraftProvider =
-    NotifierProvider<ActiveDraftNotifier, NewsDraft?>(ActiveDraftNotifier.new);
+final activeDraftProvider = NotifierProvider<ActiveDraftNotifier, NewsDraft?>(
+  ActiveDraftNotifier.new,
+);
 
 /// Drafts list provider fetching from SQLite storage
 final draftsListProvider = FutureProvider<List<NewsDraft>>((ref) async {
@@ -87,35 +113,56 @@ final draftCountProvider = Provider<int>((ref) {
 });
 
 /// News list provider with optional status filter
-final newsListProvider =
-    FutureProvider.family<List<News>, NewsStatus?>((ref, statusFilter) async {
-  final newsRepo = ref.watch(newsRepositoryProvider);
-  final reporter = ref.watch(currentReporterProvider).asData?.value;
-  if (reporter == null) return [];
+final newsListProvider = FutureProvider.family<List<News>, NewsStatus?>((
+  ref,
+  statusFilter,
+) async {
+  final newsRepo = ref.watch(sqliteSubmittedNewsRepositoryProvider);
+  final tokenStorage = ref.watch(secureTokenStorageProvider);
+  final newsApiService = ref.watch(newsApiServiceProvider);
+  final authState = ref.watch(authStateProvider);
+  final authUser = authState.user;
+  final reporterId = authUser?.uuid ?? (authUser != null ? authUser.id.toString() : 'rep-uuid-001');
+
+  // Attempt online sync if token is available
+  try {
+    final token = await tokenStorage.readAccessToken();
+    if (token != null && token.isNotEmpty) {
+      final remoteList = await newsApiService.getReporterNews(
+        accessToken: token,
+        statusFilter: statusFilter?.toValue(),
+      );
+      if (remoteList.isNotEmpty) {
+        final withReporter = remoteList.map((n) {
+          if (n.reporterId.isEmpty || n.reporterId == 'user-001') {
+            return n.copyWith(reporterId: reporterId);
+          }
+          return n;
+        }).toList();
+        await newsRepo.saveAll(withReporter);
+      }
+    }
+  } catch (_) {
+    // Offline / network failure graceful fallback to SQLite
+  }
+
   return newsRepo.getReporterNews(
-    reporterId: reporter.id,
+    reporterId: reporterId,
     statusFilter: statusFilter,
   );
 });
 
 /// Aggregate submission counts provider for the dashboard
-final newsStatusCountsProvider =
-    FutureProvider<Map<NewsStatus, int>>((ref) async {
-  final newsRepo = ref.watch(newsRepositoryProvider);
-  final reporter = ref.watch(currentReporterProvider).asData?.value;
+final newsStatusCountsProvider = FutureProvider<Map<NewsStatus, int>>((
+  ref,
+) async {
+  final newsRepo = ref.watch(sqliteSubmittedNewsRepositoryProvider);
   final draftCount = ref.watch(draftCountProvider);
+  final authState = ref.watch(authStateProvider);
+  final authUser = authState.user;
+  final reporterId = authUser?.uuid ?? (authUser != null ? authUser.id.toString() : 'rep-uuid-001');
 
-  if (reporter == null) {
-    return {
-      NewsStatus.draft: draftCount,
-      NewsStatus.pending: 0,
-      NewsStatus.approved: 0,
-      NewsStatus.published: 0,
-      NewsStatus.rejected: 0,
-    };
-  }
-
-  final counts = await newsRepo.getNewsStatusCounts(reporterId: reporter.id);
+  final counts = await newsRepo.getNewsStatusCounts(reporterId: reporterId);
   // Ensure the draft count reflects real SQLite draft storage
   counts[NewsStatus.draft] = draftCount;
   return counts;

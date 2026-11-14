@@ -62,6 +62,9 @@ class _TrackingNewsSubmissionRepository implements NewsSubmissionRepository {
   Future<News> previewNewsStory(NewsDraft draft) => submitNewsStory(draft);
 
   @override
+  Future<int> retryPendingMediaRegistrations() async => 0;
+
+  @override
   Future<News> submitNewsStory(NewsDraft draft) async {
     submittedDraftIds.add(draft.id);
     return News(

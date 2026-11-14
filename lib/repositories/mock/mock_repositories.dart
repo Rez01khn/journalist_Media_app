@@ -458,6 +458,11 @@ class MockNewsSubmissionRepository implements NewsSubmissionRepository {
   }
 
   @override
+  Future<int> retryPendingMediaRegistrations() async {
+    return 0;
+  }
+
+  @override
   Future<bool> exportApprovedStoryToLaravelWebsite({
     required String newsId,
   }) async {

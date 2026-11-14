@@ -5,6 +5,8 @@ import 'package:journalist_app_1/core/constants/app_colors.dart';
 enum NewsStatus {
   draft,
   pending,
+  underReview,
+  correctionRequested,
   approved,
   published,
   rejected;
@@ -15,7 +17,11 @@ enum NewsStatus {
       case NewsStatus.draft:
         return 'Draft';
       case NewsStatus.pending:
-        return 'Pending';
+        return 'Submitted';
+      case NewsStatus.underReview:
+        return 'Under Review';
+      case NewsStatus.correctionRequested:
+        return 'Correction Requested';
       case NewsStatus.approved:
         return 'Approved';
       case NewsStatus.published:
@@ -32,6 +38,10 @@ enum NewsStatus {
         return AppColors.statusDraft;
       case NewsStatus.pending:
         return AppColors.statusPending;
+      case NewsStatus.underReview:
+        return const Color(0xFF0284C7); // Sky Blue
+      case NewsStatus.correctionRequested:
+        return const Color(0xFFEA580C); // Warm Orange
       case NewsStatus.approved:
         return AppColors.statusApproved;
       case NewsStatus.published:
@@ -47,8 +57,19 @@ enum NewsStatus {
   /// Parse from string value
   static NewsStatus fromString(String value) {
     final normalized = value.toLowerCase().replaceAll(' ', '_');
-    if (normalized == 'pending_review' || normalized == 'under_review') {
+    if (normalized == 'pending' ||
+        normalized == 'submitted' ||
+        normalized == 'pending_review' ||
+        normalized == 'resubmitted') {
       return NewsStatus.pending;
+    }
+    if (normalized == 'under_review' ||
+        normalized == 'in_review') {
+      return NewsStatus.underReview;
+    }
+    if (normalized == 'correction_requested' ||
+        normalized == 'correctionrequested') {
+      return NewsStatus.correctionRequested;
     }
     return NewsStatus.values.firstWhere(
       (s) => s.name.toLowerCase() == normalized,

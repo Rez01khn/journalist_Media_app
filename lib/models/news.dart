@@ -1,6 +1,25 @@
 import 'package:journalist_app_1/models/news_media.dart';
 import 'package:journalist_app_1/models/news_status.dart';
 
+/// Editorial status of media attachments registration against the Laravel backend.
+enum MediaRegistrationStatus {
+  none,
+  pending,
+  partial,
+  complete,
+  failed;
+
+  String toValue() => name;
+
+  static MediaRegistrationStatus fromString(String? value) {
+    if (value == null) return MediaRegistrationStatus.none;
+    return MediaRegistrationStatus.values.firstWhere(
+      (s) => s.name.toLowerCase() == value.toLowerCase(),
+      orElse: () => MediaRegistrationStatus.none,
+    );
+  }
+}
+
 /// Represents an official submitted news story in the reporting workflow.
 ///
 /// CRITICAL ARCHITECTURAL RULES:
@@ -29,6 +48,7 @@ class News {
   final String? rejectionReason;
   final String? editorialNotes;
   final bool isAiAssisted;
+  final MediaRegistrationStatus mediaRegistrationStatus;
 
   // Future Laravel news website integration metadata
   final bool isExportedToLaravelWebsite;
@@ -53,6 +73,7 @@ class News {
     this.rejectionReason,
     this.editorialNotes,
     this.isAiAssisted = false,
+    this.mediaRegistrationStatus = MediaRegistrationStatus.none,
     this.isExportedToLaravelWebsite = false,
     this.laravelWebsitePostId,
   });
@@ -76,6 +97,7 @@ class News {
     String? rejectionReason,
     String? editorialNotes,
     bool? isAiAssisted,
+    MediaRegistrationStatus? mediaRegistrationStatus,
     bool? isExportedToLaravelWebsite,
     String? laravelWebsitePostId,
   }) {
@@ -98,6 +120,8 @@ class News {
       rejectionReason: rejectionReason ?? this.rejectionReason,
       editorialNotes: editorialNotes ?? this.editorialNotes,
       isAiAssisted: isAiAssisted ?? this.isAiAssisted,
+      mediaRegistrationStatus:
+          mediaRegistrationStatus ?? this.mediaRegistrationStatus,
       isExportedToLaravelWebsite:
           isExportedToLaravelWebsite ?? this.isExportedToLaravelWebsite,
       laravelWebsitePostId: laravelWebsitePostId ?? this.laravelWebsitePostId,
@@ -124,6 +148,7 @@ class News {
       'rejection_reason': rejectionReason,
       'editorial_notes': editorialNotes,
       'is_ai_assisted': isAiAssisted,
+      'media_registration_status': mediaRegistrationStatus.toValue(),
       'is_exported_to_laravel_website': isExportedToLaravelWebsite,
       'laravel_website_post_id': laravelWebsitePostId,
     };
@@ -131,14 +156,14 @@ class News {
 
   factory News.fromJson(Map<String, dynamic> json) {
     return News(
-      id: json['id'] as String,
+      id: json['id']?.toString() ?? '',
       trackingCode: json['tracking_code'] as String? ?? 'REP-000',
-      reporterId: json['reporter_id'] as String,
+      reporterId: json['reporter_id']?.toString() ?? 'user-001',
       reporterName: json['reporter_name'] as String? ?? 'Reporter',
-      headline: json['headline'] as String,
-      category: json['category'] as String,
-      location: json['location'] as String,
-      incidentDetails: json['incident_details'] as String,
+      headline: json['headline'] as String? ?? '',
+      category: json['category'] as String? ?? '',
+      location: json['location'] as String? ?? '',
+      incidentDetails: json['incident_details'] as String? ?? '',
       status: NewsStatus.fromString(json['status'] as String? ?? 'draft'),
       mediaAttachments: (json['media_attachments'] as List<dynamic>?)
               ?.map((item) => NewsMedia.fromJson(item as Map<String, dynamic>))
@@ -162,6 +187,9 @@ class News {
       rejectionReason: json['rejection_reason'] as String?,
       editorialNotes: json['editorial_notes'] as String?,
       isAiAssisted: json['is_ai_assisted'] as bool? ?? false,
+      mediaRegistrationStatus: MediaRegistrationStatus.fromString(
+        json['media_registration_status'] as String?,
+      ),
       isExportedToLaravelWebsite:
           json['is_exported_to_laravel_website'] as bool? ?? false,
       laravelWebsitePostId: json['laravel_website_post_id'] as String?,

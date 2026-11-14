@@ -30,6 +30,9 @@ class NewsPreviewScreen extends ConsumerStatefulWidget {
 class _NewsPreviewScreenState extends ConsumerState<NewsPreviewScreen> {
   NewsValidationResult? _validationResult;
 
+  // Submission in-progress guard — prevents duplicate taps
+  bool _isSubmitting = false;
+
   // Video preview player
   VideoPlayerController? _videoController;
   bool _videoInitialized = false;
@@ -212,20 +215,31 @@ class _NewsPreviewScreenState extends ConsumerState<NewsPreviewScreen> {
   }
 
   Future<void> _submitOrQueueStory() async {
-    final outcome = await ref
-        .read(offlineSubmissionQueueProvider.notifier)
-        .submitOrHoldDraft(widget.draft);
+    if (_isSubmitting) return; // Prevent duplicate taps
+    setState(() => _isSubmitting = true);
+    try {
+      final outcome = await ref
+          .read(offlineSubmissionQueueProvider.notifier)
+          .submitOrHoldDraft(widget.draft);
 
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(outcome.message),
-        backgroundColor: outcome.queuedOffline
-            ? AppColors.statusPending
-            : AppColors.statusPublished,
-      ),
-    );
-    Navigator.of(context).pop(outcome.submitted);
+      ref.invalidate(newsListProvider);
+      ref.invalidate(newsStatusCountsProvider);
+      ref.invalidate(draftsListProvider);
+      ref.invalidate(draftCountProvider);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(outcome.message),
+          backgroundColor: outcome.queuedOffline
+              ? AppColors.statusPending
+              : AppColors.statusPublished,
+        ),
+      );
+      Navigator.of(context).pop(outcome.submitted);
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   void _showConfirmSubmissionDialog() {
@@ -298,10 +312,12 @@ class _NewsPreviewScreenState extends ConsumerState<NewsPreviewScreen> {
           ),
           ElevatedButton.icon(
             key: const ValueKey('dialog_confirm_submit_btn'),
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              _submitOrQueueStory();
-            },
+            onPressed: _isSubmitting
+                ? null
+                : () {
+                    Navigator.of(ctx).pop();
+                    _submitOrQueueStory();
+                  },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.navyPrimary,
               foregroundColor: Colors.white,
@@ -746,123 +762,95 @@ class _NewsPreviewScreenState extends ConsumerState<NewsPreviewScreen> {
         ),
         child: SafeArea(
           top: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          child: Row(
             children: [
-              Container(
-                width: double.infinity,
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFEF3C7),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(
-                      Icons.info_outline,
-                      color: Color(0xFFD97706),
-                      size: 15,
-                    ),
-                    SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        'Submission unavailable until backend integration',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF92400E),
-                        ),
+              Expanded(
+                flex: 2,
+                child: SizedBox(
+                  height: 46,
+                  child: OutlinedButton(
+                    key: const ValueKey('preview_edit_news_btn'),
+                    onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.navyPrimary,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      side: const BorderSide(
+                        color: AppColors.navyPrimary,
+                        width: 1.4,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                  ],
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.edit_outlined, size: 17),
+                        SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            'Edit News',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-              Row(
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: SizedBox(
-                      height: 46,
-                      child: OutlinedButton(
-                        key: const ValueKey('preview_edit_news_btn'),
-                        onPressed: () => Navigator.of(context).pop(),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.navyPrimary,
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          side: const BorderSide(
-                            color: AppColors.navyPrimary,
-                            width: 1.4,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.edit_outlined, size: 17),
-                            SizedBox(width: 6),
-                            Flexible(
-                              child: Text(
-                                'Edit News',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+              const SizedBox(width: 10),
+              Expanded(
+                flex: 3,
+                child: SizedBox(
+                  height: 46,
+                  child: ElevatedButton(
+                    key: const ValueKey('preview_confirm_submission_btn'),
+                    onPressed: (isValid && !_isSubmitting)
+                        ? _showConfirmSubmissionDialog
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.navyPrimary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    flex: 3,
-                    child: SizedBox(
-                      height: 46,
-                      child: ElevatedButton(
-                        key: const ValueKey('preview_confirm_submission_btn'),
-                        onPressed: isValid
-                            ? _showConfirmSubmissionDialog
-                            : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.navyPrimary,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.send_rounded, size: 16),
-                            SizedBox(width: 6),
-                            Flexible(
-                              child: Text(
-                                'Confirm Submission',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
+                    child: _isSubmitting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.send_rounded, size: 16),
+                              SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  'Confirm Submission',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                            ],
+                          ),
                   ),
-                ],
+                ),
               ),
             ],
           ),

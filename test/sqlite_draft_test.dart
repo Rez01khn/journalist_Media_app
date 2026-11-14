@@ -1,7 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:journalist_app_1/core/database/database_service.dart';
+import 'package:journalist_app_1/models/news.dart';
 import 'package:journalist_app_1/models/news_draft.dart';
+import 'package:journalist_app_1/models/news_status.dart';
 import 'package:journalist_app_1/repositories/sqlite/sqlite_draft_repository.dart';
+import 'package:journalist_app_1/repositories/sqlite/sqlite_submitted_news_repository.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
@@ -35,6 +38,27 @@ void main() {
         drive_sync_status TEXT DEFAULT 'pending',
         last_synced_at TEXT,
         sync_error_message TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE ${DatabaseService.tableSubmittedNews} (
+        id TEXT PRIMARY KEY,
+        server_id TEXT NOT NULL,
+        server_uuid TEXT NOT NULL,
+        tracking_code TEXT NOT NULL,
+        reporter_id TEXT NOT NULL,
+        headline TEXT NOT NULL,
+        category TEXT,
+        location TEXT,
+        incident_details TEXT,
+        status TEXT NOT NULL,
+        submitted_at TEXT NOT NULL,
+        client_draft_uuid TEXT,
+        media_attachments TEXT,
+        voice_dispatch TEXT,
+        is_ai_assisted INTEGER DEFAULT 0,
+        media_registration_status TEXT DEFAULT 'none'
       )
     ''');
 
@@ -175,6 +199,49 @@ void main() {
       expect(restored, isNotNull);
       expect(restored!.id, equals('draft-b'));
       expect(restored.headline, equals('Last In-Progress Field Dispatch'));
+    });
+  });
+
+  group('SQLite Submitted News Persistence Tests', () {
+    test('saveSubmittedNews persists server ID, tracking code, status, and retrieves it', () async {
+      final submittedRepo = SqliteSubmittedNewsRepository(dbService);
+
+      final news = News(
+        id: '101',
+        trackingCode: 'REP-20261114-0101',
+        reporterId: 'user-001',
+        reporterName: 'Rezwan Karim',
+        headline: 'High-Speed Rail Feasibility Study Approved',
+        category: 'Transport',
+        location: 'Dhaka',
+        incidentDetails: 'The cabinet approved the feasibility study today.',
+        status: NewsStatus.pending,
+        submittedAt: DateTime(2026, 11, 14, 11, 0),
+      );
+
+      await submittedRepo.saveSubmittedNews(news, clientDraftUuid: 'uuid-1234');
+
+      final list = await submittedRepo.getAllSubmittedNews(reporterId: 'user-001');
+      expect(list.length, equals(1));
+      expect(list.first.id, equals('101'));
+      expect(list.first.trackingCode, equals('REP-20261114-0101'));
+      expect(list.first.status, equals(NewsStatus.pending));
+      expect(list.first.headline, equals('High-Speed Rail Feasibility Study Approved'));
+
+      final single = await submittedRepo.getSubmittedNewsById('REP-20261114-0101');
+      expect(single, isNotNull);
+      expect(single!.id, equals('101'));
+
+      // Test NewsRepository contract implementations
+      final filteredList = await submittedRepo.getReporterNews(
+        reporterId: 'user-001',
+        statusFilter: NewsStatus.pending,
+      );
+      expect(filteredList.length, equals(1));
+
+      final counts = await submittedRepo.getNewsStatusCounts(reporterId: 'user-001');
+      expect(counts[NewsStatus.pending], equals(1));
+      expect(counts[NewsStatus.approved], equals(0));
     });
   });
 }
